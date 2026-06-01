@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic V2Ray Control Board</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔮 Magic_V2Ray Dashboard</h1>
+            <div class="status-badge" id="service-status">Status: Checking...</div>
+        </header>
+
+        <section class="control-actions">
+            <button class="btn btn-start" onclick="toggleService('start')">⚡ Start Engine</button>
+            <button class="btn btn-stop" onclick="toggleService('stop')">🛑 Stop Engine</button>
+        </section>
+
+        <section class="import-section">
+            <h3>📥 Import Configuration Profile</h3>
+            <textarea id="import-input" placeholder="Paste Sub Link (https://...) or Manual String (vless://, vmess://, trojan://) here..."></textarea>
+            <button class="btn btn-primary" onclick="processImport()">Process Connection Link</button>
+        </section>
+
+        <section class="profiles-section">
+            <h3>🗂️ Connection Categories</h3>
+            <div id="profiles-container"></div>
+        </section>
+    </div>
+    <script src="helper.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
