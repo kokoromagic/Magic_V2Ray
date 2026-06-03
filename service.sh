@@ -79,6 +79,15 @@ do_job() {
             $iptables -t mangle -A XRAY_MARK -m mark --mark 255 -j RETURN
             $iptables -t mangle -A XRAY_MARK -m owner --uid-owner 9999-999999 -j MARK --set-xmark 1
             $iptables -t mangle -A OUTPUT -j XRAY_MARK 
+            # IPv4 Hotspot support
+            $iptables -t mangle -A PREROUTING -i wlan+ -j MARK --set-xmark 1
+            $iptables -t mangle -A PREROUTING -i ap+ -j MARK --set-xmark 1
+            $iptables -t mangle -A PREROUTING -i softap+ -j MARK --set-xmark 1
+            $iptables -A FORWARD -i wlan+ -o xraytun0 -j ACCEPT
+            $iptables -A FORWARD -i ap+ -o xraytun0 -j ACCEPT
+            $iptables -A FORWARD -i softap+ -o xraytun0 -j ACCEPT
+            $iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+            $iptables -t nat -A POSTROUTING -o xraytun0 -j MASQUERADE
 
             # IPV6
             # STEP 1: Create tun device and assign IP address
@@ -93,6 +102,10 @@ do_job() {
             $ip6tables -t mangle -A XRAY_MARK -m mark --mark 255 -j RETURN
             $ip6tables -t mangle -A XRAY_MARK -m owner --uid-owner 9999-999999 -j MARK --set-xmark 1
             $ip6tables -t mangle -A OUTPUT -j XRAY_MARK
+            # IPv6 Hotspot support
+            $ip6tables -t mangle -A PREROUTING -i wlan+ -j MARK --set-xmark 1
+            $ip6tables -t mangle -A PREROUTING -i ap+ -j MARK --set-xmark 1
+            $ip6tables -t nat -A POSTROUTING -o xraytun0 -j MASQUERADE
         fi
     fi
 }

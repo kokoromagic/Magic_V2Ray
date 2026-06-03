@@ -32,11 +32,24 @@ clear_routing_rules() {
     $iptables -t mangle -F XRAY_MARK 2>/dev/null
     $iptables -t mangle -X XRAY_MARK 2>/dev/null
     $ip rule del fwmark 1 table 100 priority 1010 2>/dev/null
+    # IPv4 hotspot
+    $iptables -t mangle -D PREROUTING -i wlan+ -j MARK --set-xmark 1 2>/dev/null
+    $iptables -t mangle -D PREROUTING -i ap+ -j MARK --set-xmark 1 2>/dev/null
+    $iptables -t mangle -D PREROUTING -i softap+ -j MARK --set-xmark 1 2>/dev/null
+    $iptables -D FORWARD -i wlan+ -o xraytun0 -j ACCEPT 2>/dev/null
+    $iptables -D FORWARD -i ap+ -o xraytun0 -j ACCEPT 2>/dev/null
+    $iptables -D FORWARD -i softap+ -o xraytun0 -j ACCEPT 2>/dev/null
+    $iptables -D FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
+    $iptables -t nat -D POSTROUTING -o xraytun0 -j MASQUERADE 2>/dev/null
     # IPv6
     $ip6tables -t mangle -D OUTPUT -j XRAY_MARK 2>/dev/null
     $ip6tables -t mangle -F XRAY_MARK 2>/dev/null
     $ip6tables -t mangle -X XRAY_MARK 2>/dev/null
     $ip -6 rule del fwmark 1 table 100 priority 1010 2>/dev/null
+    # IPv6 hotspot
+    $ip6tables -t mangle -D PREROUTING -i wlan+ -j MARK --set-xmark 1 2>/dev/null
+    $ip6tables -t mangle -D PREROUTING -i ap+ -j MARK --set-xmark 1 2>/dev/null
+    $ip6tables -t nat -D POSTROUTING -o xraytun0 -j MASQUERADE 2>/dev/null
 
     # Down the tun device
     $ip link set dev xraytun0 down 2>/dev/null
