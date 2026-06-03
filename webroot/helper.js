@@ -49,7 +49,7 @@ function convert_uri_to_xray_json(uri) {
                 streamSettings: {
                     network: c.net || "tcp",
                     security: c.tls || "none",
-                    sockopt: {}
+                    sockopt: { mark: 255, "dialerProxy": "direct" }
                 }
             };
 
@@ -90,7 +90,7 @@ function convert_uri_to_xray_json(uri) {
                 streamSettings: { 
                     network: net, 
                     security: sec,
-                    sockopt: {}
+                    sockopt: { mark: 255, "dialerProxy": "direct" }
                 }
             };
 
@@ -159,7 +159,7 @@ function convert_uri_to_xray_json(uri) {
                 "protocol": "freedom", 
                 "tag": "direct",
                 "streamSettings": {
-                    "sockopt": {}
+                    "sockopt": { mark: 255 }
                 }
             }
         ],
