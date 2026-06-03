@@ -1,6 +1,7 @@
 const MODDIR = "/data/adb/modules/magic_v2ray";
 const DATADIR = "/data/adb/magic_v2ray";
 const PROFILES_FILE = `${DATADIR}/profiles.base64`;
+const SETTINGS_FILE = `${DATADIR}/settings.base64`;
 const ACTIVE_FILE = `${DATADIR}/active_config.txt`;
 const CONFIG_JSON = `${DATADIR}/config.json`;
 const MAGISK_BRIDGE_URL = "http://127.0.0.1:11701/cgi-bin/exec";
@@ -8,6 +9,20 @@ const MAGISK_TOKEN = "__SECRET_TOKEN__";
  
 let profiles = {};
 let activeConfig = null;
+let advSettings = {
+    loglevel: "debug",
+    sniffing: true,
+    routeOnly: false,
+    preferIpv6: false,
+    mux: false,
+    mux_connections: 8,
+    fragment: false,
+    fragment_packets: "tlshello",
+    fragment_length: "50-100",
+    fragment_interval: "10-20",
+    mtu: 1350,
+    pinnedPeerCertSha256: ""
+};
  
 function execShell(command, callback) {
     if (typeof ksu === "object" && typeof ksu.exec === "function") {
@@ -99,12 +114,11 @@ function updateStatusDisplay() {
  
 function toggleService(action) {
     if (action === 'start' || action === 'restart') {
-        // Re-apply config.json for selected node before starting
         if (activeConfig) {
             const [category, id] = activeConfig.split(':');
             const node = profiles[category]?.nodes?.find(n => n.id === id); 
             if (node) {
-                const xrayConfig = convert_uri_to_xray_json(node.rawUri);
+                const xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
                 execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
                     execShell(`sh ${MODDIR}/proxy_control.sh restart`, () => {
                         updateStatusDisplay();      
@@ -148,14 +162,14 @@ const extractUrisFromText = (text) => {
  
 function processImport() {
     const input = document.getElementById('import-input').value.trim();
-    if (!input) return alert("Please paste a valid configuration or link.");
+    if (!input) return showToast("Please paste a valid configuration or link.", "error");
  
     if (input.startsWith('http://') || input.startsWith('https://')) {
         let domain;
         try {
             domain = new URL(input).hostname;
         } catch (e) {
-            return alert("Invalid Subscription Link Format.");
+            return showToast("Invalid Subscription Link Format.", "error");
         }
         fetchSubscription(domain, input);
     } else {
@@ -170,10 +184,10 @@ function fetchSubscription(category, url, isReload = false) {
     const escapedUrl = url.replace(/'/g, "'\\''");
     execShell(`curl -sLk --max-time 15 '${escapedUrl}'`, (res) => {
         if (!res || res.trim() === "") {
-            return alert("Failed to fetch.\nReason: Network unreachable or curl not available.");
+            return showToast("Failed to fetch.\nReason: Network unreachable or curl not available.", "error");
         }
         if (res.includes("Failed to connect") || res.includes("Could not resolve")) {
-            return alert("Failed to fetch.\nReason: " + res.split('\n')[0]);
+            return showToast("Failed to fetch.\nReason: " + res.split('\n')[0], "error");
         }
 
         let parsedContent = res.trim();
@@ -196,7 +210,7 @@ function fetchSubscription(category, url, isReload = false) {
  
 function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false) {
     if (!Array.isArray(xrayConfigs) || xrayConfigs.length === 0) {
-        return alert("No valid configs extracted.\nSupported: vless://, vmess://, trojan://");
+        return showToast("No valid configs extracted.\nSupported: vless://, vmess://, trojan://", "error");
     }
 
     if (isReload && profiles[category]) {
@@ -224,7 +238,7 @@ function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false
     });
 
     if (isReload) {
-        alert(`Reloaded complete! Got ${profiles[category].nodes.length} node(s) for "${category}".`);
+        showToast(`Reloaded complete! Got ${profiles[category].nodes.length} node(s) for "${category}".`, "success");
         if (activeConfig && activeConfig.startsWith(category + ':')) {
             const [_, currentId] = activeConfig.split(':');
             const stillExists = profiles[category].nodes.some(n => n.id === currentId);
@@ -235,9 +249,9 @@ function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false
         }
     } else {
         if (importedCount === 0) {
-            alert("No new or valid configs extracted.");
+            showToast("No new or valid configs extracted.", "info");
         } else {
-            alert(`Imported ${importedCount} node(s) into "${category}".`);
+            showToast(`Imported ${importedCount} node(s) into "${category}".`, "info");
         }
     }
  
@@ -248,7 +262,7 @@ function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false
 function reloadCategory(category) {
     const catData = profiles[category];
     if (!catData || !catData.url) {
-        return alert("This category does not have a subscription URL to reload.");
+        return showToast("This category does not have a subscription URL to reload.", "info");
     }
     fetchSubscription(category, catData.url, true);
 }
@@ -318,7 +332,7 @@ function selectNode(category, id) {
  
     activeConfig = `${category}:${id}`;
     saveActiveConfig();
-    xrayConfig = convert_uri_to_xray_json(node.rawUri);
+    xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
  
     // dump xray config to file and restart service if running
     execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
@@ -415,4 +429,117 @@ function escapeHtml(str) {
  
 function escapeAttr(str) {
     return String(str).replace(/'/g, "\\'");
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+function toggleSubSettingField(triggerId, subPanelId) {
+    const isChecked = document.getElementById(triggerId).checked;
+    document.getElementById(subPanelId).style.display = isChecked ? 'block' : 'none';
+}
+
+const originalLoadState = loadState;
+loadState = function(callback) {
+    originalLoadState(() => {
+        execShell(`cat '${SETTINGS_FILE}' 2>/dev/null || echo ''`, (settingsRaw) => {
+            if (settingsRaw.trim()) {
+                try {
+                    advSettings = JSON.parse(decodeURIComponent(escape(atob(settingsRaw.trim()))));
+                } catch (e) {
+                    console.warn("[loadState] Custom settings corrupt, fallback to defaults.");
+                }
+            }
+            bindSettingsToFormView();
+            if (callback) callback();
+        });
+    });
+};
+
+function bindSettingsToFormView() {
+    document.getElementById('set-loglevel').value = advSettings.loglevel || "debug";
+    document.getElementById('set-sniffing').checked = advSettings.sniffing;
+    document.getElementById('set-routeonly').checked = advSettings.routeOnly;
+    document.getElementById('set-preferipv6').checked = advSettings.preferIpv6;
+    document.getElementById('set-pinned-cert').value = advSettings.pinnedPeerCertSha256 || "";
+    
+    document.getElementById('set-mux').checked = advSettings.mux;
+    document.getElementById('set-mux-connections').value = advSettings.mux_connections;
+    toggleSubSettingField('set-mux', 'mux-sub-fields');
+
+    document.getElementById('set-fragment').checked = advSettings.fragment;
+    document.getElementById('set-fragment-packets').value = advSettings.fragment_packets || "tlshello";
+    document.getElementById('set-fragment-length').value = advSettings.fragment_length || "50-100";
+    document.getElementById('set-fragment-interval').value = advSettings.fragment_interval || "10-20";
+    toggleSubSettingField('set-fragment', 'fragment-sub-fields');
+
+    document.getElementById('set-mtu').value = advSettings.mtu || 1350;
+}
+
+function saveAdvancedSettingsForm() {
+    advSettings.loglevel = document.getElementById('set-loglevel').value;
+    advSettings.sniffing = document.getElementById('set-sniffing').checked;
+    advSettings.routeOnly = document.getElementById('set-routeonly').checked;
+    advSettings.preferIpv6 = document.getElementById('set-preferipv6').checked;
+    advSettings.pinnedPeerCertSha256 = document.getElementById('set-pinned-cert').value.trim();
+    
+    advSettings.mux = document.getElementById('set-mux').checked;
+    advSettings.mux_connections = parseInt(document.getElementById('set-mux-connections').value) || 8;
+
+    advSettings.fragment = document.getElementById('set-fragment').checked;
+    advSettings.fragment_packets = document.getElementById('set-fragment-packets').value;
+    advSettings.fragment_length = document.getElementById('set-fragment-length').value || "50-100";
+    advSettings.fragment_interval = document.getElementById('set-fragment-interval').value || "10-20";
+
+    advSettings.mtu = parseInt(document.getElementById('set-mtu').value) || 1350;
+
+    const jsonStr = JSON.stringify(advSettings);
+    const base64Encoded = utoa(jsonStr);
+    
+    execShell(`printf '%s' '${base64Encoded}' > '${SETTINGS_FILE}'`, () => {
+        showToast("Advanced settings saved successfully!", "success");
+        
+        if (activeConfig) {
+            const [category, id] = activeConfig.split(':');
+            const node = profiles[category]?.nodes?.find(n => n.id === id); 
+            if (node) {
+                const xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
+                execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
+                    execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
+                        if (status === 'running') {
+                            toggleService('restart');
+                        }
+                    });
+                });
+                return;
+            }
+        }
+    });
+}
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+    toast.innerText = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
 }

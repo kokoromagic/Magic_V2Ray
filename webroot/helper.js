@@ -16,7 +16,22 @@ function utoa(str) {
     return btoa(binString);
 }
 
-function convert_uri_to_xray_json(uri) {
+function convert_uri_to_xray_json(uri, optional_settings) {
+    const settings = optional_settings || {
+        loglevel: "debug",
+        sniffing: true,
+        routeOnly: false,
+        preferIpv6: false,
+        mux: false,
+        mux_connections: 8,
+        fragment: false,
+        fragment_packets: "tlshello",
+        fragment_length: "50-100",
+        fragment_interval: "10-20",
+        mtu: 1350,
+        pinnedPeerCertSha256: ""
+    };
+
     const b64decode = s => {
         try { 
             return decodeURIComponent(escape(atob(s.trim()))); 
@@ -58,6 +73,9 @@ function convert_uri_to_xray_json(uri) {
                     serverName: c.sni || "",
                     alpn: c.alpn ? c.alpn.split(',') : undefined
                 };
+                if (settings.pinnedPeerCertSha256) {
+                    outbound.streamSettings.tlsSettings.pinnedPeerCertSha256 = [settings.pinnedPeerCertSha256];
+                }
             }
             if (c.net === 'ws') {
                 outbound.streamSettings.wsSettings = {
@@ -94,11 +112,21 @@ function convert_uri_to_xray_json(uri) {
                 }
             };
 
-            if (sec === 'tls') {
-                outbound.streamSettings.tlsSettings = {
-                    serverName: p.get('sni') || "",
-                    alpn: p.get('alpn') ? p.get('alpn').split(',') : undefined
-                };
+            if (sec === 'tls' || sec === 'reality') {
+                if (sec === 'reality') {
+                    outbound.streamSettings.realitySettings = {
+                        serverName: p.get('sni') || "",
+                        alpn: p.get('alpn') ? p.get('alpn').split(',') : undefined
+                    };
+                } else {
+                    outbound.streamSettings.tlsSettings = {
+                        serverName: p.get('sni') || "",
+                        alpn: p.get('alpn') ? p.get('alpn').split(',') : undefined
+                    };
+                    if (settings.pinnedPeerCertSha256) {
+                        outbound.streamSettings.tlsSettings.pinnedPeerCertSha256 = [settings.pinnedPeerCertSha256];
+                    }
+                }
             }
             if (net === 'ws') {
                 outbound.streamSettings.wsSettings = {
@@ -120,13 +148,31 @@ function convert_uri_to_xray_json(uri) {
         return JSON.stringify({ error: "Unsupported or malformed URI" }, null, 2);
     }
 
+    if (settings.mux) {
+        outbound.streamSettings.mux = {
+            enabled: true,
+            concurrency: parseInt(settings.mux_connections) || 8
+        };
+    }
+
+    if (settings.fragment) {
+        outbound.streamSettings.sockopt.fragment = {
+            packets: settings.fragment_packets || "tlshello",
+            length: settings.fragment_length || "50-100",
+            interval: settings.fragment_interval || "10-20"
+        };
+    }
+
     const fullConfig = {
-        log: { loglevel: "debug" },
+        log: { 
+            loglevel: settings.loglevel || "debug" 
+        }, 
         dns: {
             servers: [
                 "1.1.1.1",
                 "8.8.8.8"
-            ]
+            ],
+            queryStrategy: settings.preferIpv6 ? "UseIPv6" : "UseIPv4"
         },
         inbounds: [
             {
@@ -139,8 +185,9 @@ function convert_uri_to_xray_json(uri) {
                     "udp": true
                 },
                 "sniffing": {
-                    "enabled": false,
-                    "destOverride": ["http", "tls", "quic"]
+                    "enabled": settings.sniffing,
+                    "destOverride": ["http", "tls", "quic"],
+                    "routeOnly": settings.routeOnly
                 }
             },
             {
@@ -159,7 +206,9 @@ function convert_uri_to_xray_json(uri) {
                 "protocol": "freedom", 
                 "tag": "direct",
                 "streamSettings": {
-                    "sockopt": { mark: 255 }
+                    "sockopt": { 
+                        mark: 255
+                    }
                 }
             }
         ],
@@ -175,7 +224,6 @@ function convert_uri_to_xray_json(uri) {
                     "port": 53,
                     "outboundTag": "direct"
                 },
-
                 {
                     "type": "field",
                     "inboundTag": [
