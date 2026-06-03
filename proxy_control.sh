@@ -5,11 +5,13 @@ PIDFILE="$MODDIR/run/xray.pid"
 TUN2SOCKS_PIDFILE="$MODDIR/run/tun2socks.pid"
 
 PIPE_FILE="$MODDIR/run/control.pipe"
+DATADIR="/data/adb/magic_v2ray"
+set -x >"$DATADIR/proxy_control.log" 2>&1
 
-TUN_DEV="xraytun0"
-TUN_IP="198.18.0.1"
-TUN_GW="198.18.0.2"
-TUN_TABLE=100
+# Always using system binaries for critical operations to ensure compatibility and reliability
+ip="/system/bin/ip"
+iptables="/system/bin/iptables"
+ip6tables="/system/bin/ip6tables"
 
 get_status() {
     if [ -f "$PIDFILE" ]; then
@@ -25,7 +27,19 @@ get_status() {
 }
 
 clear_routing_rules() {
-    # FIX ME: retore original rules
+    # IPv4
+    $iptables -t mangle -D OUTPUT -j XRAY_MARK 2>/dev/null
+    $iptables -t mangle -F XRAY_MARK 2>/dev/null
+    $iptables -t mangle -X XRAY_MARK 2>/dev/null
+    $ip rule del fwmark 1 table 100 priority 1010 2>/dev/null
+    # IPv6
+    $ip6tables -t mangle -D OUTPUT -j XRAY_MARK 2>/dev/null
+    $ip6tables -t mangle -F XRAY_MARK 2>/dev/null
+    $ip6tables -t mangle -X XRAY_MARK 2>/dev/null
+    $ip -6 rule del fwmark 1 table 100 priority 1010 2>/dev/null
+
+    # Down the tun device
+    $ip link set dev xraytun0 down 2>/dev/null
 }
 
 start_proxy() {
@@ -34,16 +48,8 @@ start_proxy() {
         return 0
     fi
 
-    if [ ! -e /dev/net/tun ]; then
-        mkdir -p /dev/net
-        mknod /dev/net/tun c 10 200
-        chmod 666 /dev/net/tun
-    fi
-
     # Start xray core and tun2socks in the background
     echo start > "$PIPE_FILE"
-
-    # FIX ME: capture all traffic to tun device and redirect to xray core
 
     echo "Proxy core successfully running!"
 }
@@ -84,7 +90,7 @@ stop_proxy() {
 
 case "$1" in
     start) start_proxy ;;
-    stop) stop_proxy ;;
+    stop) stop_proxy; rm -rf "$DATADIR/config.json" ;;
     restart) stop_proxy; sleep 1; start_proxy ;;
     status)
         if get_status; then

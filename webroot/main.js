@@ -69,7 +69,7 @@ function updateStatusDisplay() {
 }
  
 function toggleService(action) {
-    if (action === 'start') {
+    if (action === 'start' || action === 'restart') {
         // Re-apply config.json for selected node before starting
         if (activeConfig) {
             const [category, id] = activeConfig.split(':');
@@ -77,7 +77,7 @@ function toggleService(action) {
             if (node) {
                 const xrayConfig = convert_uri_to_xray_json(node.rawUri);
                 execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
-                    execShell(`sh ${MODDIR}/proxy_control.sh start`, () => {
+                    execShell(`sh ${MODDIR}/proxy_control.sh restart`, () => {
                         updateStatusDisplay();      
                     });
                 });

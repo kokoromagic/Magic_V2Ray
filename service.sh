@@ -2,6 +2,7 @@
 MODDIR=${0%/*}
 BINDIR="$MODDIR/bin"
 DATADIR="/data/adb/magic_v2ray"
+set -x >"$DATADIR/service.log" 2>&1
 
 PIDFILE="$MODDIR/run/xray.pid"
 TUN2SOCKS_PIDFILE="$MODDIR/run/tun2socks.pid"
@@ -15,9 +16,21 @@ mkfifo "$PIPE_FILE"
 XRAY_PID=0
 TUN2SOCKS_PID=0
 
+ip="/system/bin/ip"
+iptables="/system/bin/iptables"
+ip6tables="/system/bin/ip6tables"
+
+RULE_PRIORITY=1000
+FWMARK=255
+
 do_job() {
     local content="$1"
     if [ "$content" = "start" ]; then
+        if [ ! -e /dev/net/tun ]; then
+            mkdir -p /dev/net
+            mknod /dev/net/tun c 10 200
+            chmod 666 /dev/net/tun
+        fi
         STAT_XRAY_EXE=$(stat -L -c "%D:%i" "/proc/$XRAY_PID/exe")
         STAT_XRAY_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/xray")
         if [ $XRAY_PID -gt 0 ] && [ "$STAT_XRAY_EXE" = "$STAT_XRAY_BIN" ]; then
@@ -38,6 +51,48 @@ do_job() {
             "$BINDIR/tun2socks" -device tun://xraytun0 -proxy socks5://127.0.0.1:10808 -fwmark 255 </dev/null &>"$DATADIR/tun2socks.log" &
             TUN2SOCKS_PID=$!
             echo "$TUN2SOCKS_PID" > "$TUN2SOCKS_PIDFILE"
+            local retry=0
+            local max_retry=10
+            while [ $retry -lt $max_retry ]; do
+                if $ip link show "xraytun0" >/dev/null 2>&1; then
+                    break
+                fi
+                sleep 0.5
+                retry=$((retry + 1))
+            done
+
+            # Capture all traffic to tun device and redirect to xray core
+
+            # IPV4
+            # STEP 1: Create tun device and assign IP address
+            $ip addr add 198.18.0.1/15 dev xraytun0
+            $ip link set dev xraytun0 up
+            $ip route replace default dev xraytun0 table 100
+            # STEP 2: Enable IP Forwarding and disable rp_filter
+            echo 1 > /proc/sys/net/ipv4/ip_forward
+            echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter
+            echo 0 > /proc/sys/net/ipv4/conf/xraytun0/rp_filter
+            # STEP 3: Add routing rule to route marked packets through the tun device
+            $ip rule add fwmark 1 table 100 priority 1010
+            # STEP 4: Add iptables rules to mark packets from tun2socks and route them through the tun device
+            $iptables -t mangle -N XRAY_MARK
+            $iptables -t mangle -A XRAY_MARK -m mark --mark 255 -j RETURN
+            $iptables -t mangle -A XRAY_MARK -m owner --uid-owner 10000-999999 -j MARK --set-xmark 1
+            $iptables -t mangle -A OUTPUT -j XRAY_MARK 
+
+            # IPV6
+            # STEP 1: Create tun device and assign IP address
+            $ip -6 addr add fdfe:dcba:9876::1/64 dev xraytun0
+            $ip -6 route replace default dev xraytun0 table 100
+            # STEP 2: Enable IP Forwarding
+            echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+            # STEP 3: Add routing rule to route marked packets through the tun device
+            $ip -6 rule add fwmark 1 table 100 priority 1010
+            # STEP 4: Add ip6tables rules to mark packets from tun2socks and route them through the tun device
+            $ip6tables -t mangle -N XRAY_MARK
+            $ip6tables -t mangle -A XRAY_MARK -m mark --mark 255 -j RETURN
+            $ip6tables -t mangle -A XRAY_MARK -m owner --uid-owner 10000-999999 -j MARK --set-xmark 1
+            $ip6tables -t mangle -A OUTPUT -j XRAY_MARK
         fi
     fi
 }
@@ -46,17 +101,17 @@ do_job() {
 while true; do
     if read -r line < "$PIPE_FILE"; then
         if [ -n "$line" ]; then
-            do_job "$line" &
+            do_job "$line"
         fi
     fi
 done
 } &
 
-# ===
+if [ -e "$DATADIR/config.json" ]; then
+    echo "start" > "$PIPE_FILE"
+fi
 
-RULE_PRIORITY=1000
-FWMARK=255
-ip=/system/bin/ip
+# ===
 
 get_active_interface() {
     for iface in /sys/class/net/*; do
@@ -75,6 +130,7 @@ get_active_interface() {
 
 remove_mark_rule() {
     $ip rule del fwmark $FWMARK priority $RULE_PRIORITY 2>/dev/null
+    $ip -6 rule del fwmark $FWMARK priority $RULE_PRIORITY 2>/dev/null
 }
 
 apply_mark_rule() {
@@ -84,11 +140,8 @@ apply_mark_rule() {
 
     remove_mark_rule
 
-    $ip rule add \
-        fwmark $FWMARK \
-        table "$iface" \
-        priority $RULE_PRIORITY
-
+    $ip rule add fwmark $FWMARK table "$iface" priority $RULE_PRIORITY
+    $ip -6 rule add fwmark 255 table "$iface" priority $RULE_PRIORITY
     echo "Applied: fwmark $FWMARK -> table $iface"
 }
 
