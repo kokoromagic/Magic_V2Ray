@@ -23,6 +23,48 @@ ip6tables="/system/bin/ip6tables"
 RULE_PRIORITY=1000
 FWMARK=255
 
+get_status() {
+    if [ -f "$PIDFILE" ]; then
+        PID=$(cat "$PIDFILE")
+        STAT_XRAY_EXE=$(stat -L -c "%D:%i" "/proc/$PID/exe")
+        STAT_XRAY_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/xray")
+
+        if kill -0 "$PID" 2>/dev/null && [ "$STAT_XRAY_EXE" = "$STAT_XRAY_BIN" ]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+clear_routing_rules() {
+    # IPv4
+    $iptables -t mangle -D OUTPUT -j XRAY_MARK 2>/dev/null
+    $iptables -t mangle -F XRAY_MARK 2>/dev/null
+    $iptables -t mangle -X XRAY_MARK 2>/dev/null
+    $ip rule del fwmark 1 table 100 priority 1010 2>/dev/null
+    # IPv4 hotspot
+    $iptables -t mangle -D PREROUTING -i wlan+ -j MARK --set-xmark 1 2>/dev/null
+    $iptables -t mangle -D PREROUTING -i ap+ -j MARK --set-xmark 1 2>/dev/null
+    $iptables -t mangle -D PREROUTING -i softap+ -j MARK --set-xmark 1 2>/dev/null
+    $iptables -D FORWARD -i wlan+ -o xraytun0 -j ACCEPT 2>/dev/null
+    $iptables -D FORWARD -i ap+ -o xraytun0 -j ACCEPT 2>/dev/null
+    $iptables -D FORWARD -i softap+ -o xraytun0 -j ACCEPT 2>/dev/null
+    $iptables -D FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
+    $iptables -t nat -D POSTROUTING -o xraytun0 -j MASQUERADE 2>/dev/null
+    # IPv6
+    $ip6tables -t mangle -D OUTPUT -j XRAY_MARK 2>/dev/null
+    $ip6tables -t mangle -F XRAY_MARK 2>/dev/null
+    $ip6tables -t mangle -X XRAY_MARK 2>/dev/null
+    $ip -6 rule del fwmark 1 table 100 priority 1010 2>/dev/null
+    # IPv6 hotspot
+    $ip6tables -t mangle -D PREROUTING -i wlan+ -j MARK --set-xmark 1 2>/dev/null
+    $ip6tables -t mangle -D PREROUTING -i ap+ -j MARK --set-xmark 1 2>/dev/null
+    $ip6tables -t nat -D POSTROUTING -o xraytun0 -j MASQUERADE 2>/dev/null
+
+    # Down the tun device
+    $ip link set dev xraytun0 down 2>/dev/null
+}
+
 do_job() {
     local content="$1"
     if [ "$content" = "start" ]; then
@@ -108,6 +150,29 @@ do_job() {
             $ip6tables -t nat -A POSTROUTING -o xraytun0 -j MASQUERADE
         fi
     fi
+    if [ "$content" = "stop" ]; then
+        clear_routing_rules
+
+        if [ $XRAY_PID -gt 0 ]; then
+            STAT_XRAY_EXE=$(stat -L -c "%D:%i" "/proc/$XRAY_PID/exe")
+            STAT_XRAY_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/xray")
+            if [ "$STAT_XRAY_EXE" = "$STAT_XRAY_BIN" ]; then
+                kill -9 "$XRAY_PID" 2>/dev/null
+            fi
+            rm -f "$PIDFILE"
+            XRAY_PID=0
+        fi
+
+        if [ $TUN2SOCKS_PID -gt 0 ]; then
+            STAT_TUN2SOCKS_EXE=$(stat -L -c "%D:%i" "/proc/$TUN2SOCKS_PID/exe")
+            STAT_TUN2SOCKS_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/tun2socks")
+            if [ "$STAT_TUN2SOCKS_EXE" = "$STAT_TUN2SOCKS_BIN" ]; then
+                kill -9 "$TUN2SOCKS_PID" 2>/dev/null
+            fi
+            rm -f "$TUN2SOCKS_PIDFILE"
+            TUN2SOCKS_PID=0
+        fi
+    fi
 }
 
 {
@@ -119,10 +184,14 @@ while true; do
     fi
 done
 } &
-
+{
+while [ "$(getprop sys.boot_completed)" != 1 ]; do
+    sleep 1
+done
 if [ -e "$DATADIR/config.json" ]; then
     echo "start" > "$PIPE_FILE"
 fi
+} &
 
 # ===
 
@@ -184,6 +253,11 @@ inotifyd - /data/misc/net::w | while read -r _; do
     if [ "$cur" != "$last" ]; then
         echo "Network changed: $last -> $cur"
         last="$cur"
+        # Need to restart xray
+        if get_status; then
+            echo "stop" > "$PIPE_FILE"
+            echo "start" > "$PIPE_FILE"
+        fi
 
         # Remove the old rule
         # then add the new rule
