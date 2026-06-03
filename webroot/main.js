@@ -96,7 +96,33 @@ function toggleService(action) {
 function processImport() {
     const input = document.getElementById('import-input').value.trim();
     if (!input) return alert("Please paste a valid configuration or link.");
- 
+
+    const extractUrisFromText = (text) => {
+        let uris = [];
+        const rawLines = text.split(/\r?\n/);
+
+        rawLines.forEach(line => {
+            let trimmedLine = line.trim();
+            if (!trimmedLine) return;
+            console.log("Processing line:", trimmedLine);
+
+            if (!trimmedLine.includes('://') && /^[A-Za-z0-9+/=]+$/.test(trimmedLine)) {
+                try {
+                    const decoded = decodeBase64(trimmedLine);
+                    if (decoded) {
+                        uris = uris.concat(extractUrisFromText(decoded));
+                    }
+                } catch (e) {
+                    console.warn("Line looks like Base64 but failed to decode safely:", trimmedLine);
+                }
+            } else if (trimmedLine.includes('://')) {
+                uris.push(trimmedLine);
+                console.log("Extracted URI:", trimmedLine);
+            }
+        });
+        return uris;
+    };
+
     if (input.startsWith('http://') || input.startsWith('https://')) {
         let domain;
         try {
@@ -104,7 +130,7 @@ function processImport() {
         } catch (e) {
             return alert("Invalid Subscription Link Format.");
         }
- 
+
         const escapedUrl = input.replace(/'/g, "'\\''");
         execShell(`curl -sLk --max-time 15 '${escapedUrl}'`, (res) => {
             if (!res || res.trim() === "") {
@@ -113,40 +139,46 @@ function processImport() {
             if (res.includes("Failed to connect") || res.includes("Could not resolve")) {
                 return alert("Failed to fetch.\nReason: " + res.split('\n')[0]);
             }
- 
+
             let parsedContent = res.trim();
+            
             const cleanRes = parsedContent.replace(/[\s\r\n]+/g, '');
- 
-            if (!parsedContent.includes('://') && /^[A-Za-z0-9+/=]+$/.test(cleanRes)) {
+            if (/^[A-Za-z0-9+/=]+$/.test(cleanRes)) {
                 try {
-                    parsedContent = atob(cleanRes);
+                    const decodedAll = decodeBase64(cleanRes);
+                    if (decodedAll && decodedAll.includes('://')) {
+                        parsedContent = decodedAll;
+                    }
                 } catch (e) {
-                    return alert("Detected Base64 but failed to decode.");
+                    console.log("Not a pure single Base64 block, parsing line by line...");
                 }
             }
- 
-            parseAndAppendNodes(domain, parsedContent);
+
+            const xrayConfigs = extractUrisFromText(parsedContent);
+            parseAndAppendNodes(domain, xrayConfigs);
         });
+
     } else {
-        parseAndAppendNodes("Manual", input);
+        const xrayConfigs = extractUrisFromText(input);
+        parseAndAppendNodes("Manual", xrayConfigs);
     }
- 
+
     document.getElementById('import-input').value = "";
 }
  
-function parseAndAppendNodes(category, textBlock) {
-    const lines = textBlock.split(/\r?\n/);
+function parseAndAppendNodes(category, xrayConfigs) {
+    if (!Array.isArray(xrayConfigs) || xrayConfigs.length === 0) {
+        return alert("No valid configs extracted.\nSupported: vless://, vmess://, trojan://");
+    }
+
     if (!profiles[category]) profiles[category] = [];
- 
     let importedCount = 0;
-    lines.forEach(line => {
-        line = line.trim();
-        if (!line || !line.includes('://')) return;
- 
+
+    xrayConfigs.forEach(line => {
         const parsedNode = parseProxyUri(line);
         if (parsedNode) {
             const duplicate = profiles[category].some(
-                n => n.uuid === parsedNode.uuid && n.address === parsedNode.address
+                n => n.rawUri === parsedNode.rawUri
             );
             if (!duplicate) {
                 profiles[category].push(parsedNode);
@@ -154,13 +186,13 @@ function parseAndAppendNodes(category, textBlock) {
             }
         }
     });
- 
+
     if (importedCount === 0) {
-        alert("No valid configs extracted.\nSupported: vless://, vmess://, trojan://");
+        alert("No new or valid configs extracted.\nSupported: vless://, vmess://, trojan://");
     } else {
         alert(`Imported ${importedCount} node(s) into "${category}".`);
     }
- 
+
     saveProfiles();
     renderProfiles();
 }
