@@ -40,7 +40,7 @@ if [ ! -d "/data/adb/magic_v2ray" ]; then
 fi
 
 ui_print "- Setup secret token for files"
-RANDOM_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+RANDOM_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 150 | head -n 1)
 FILE_ACTION="$MODPATH/action.sh"
 FILE_CGI="$MODPATH/webroot/cgi-bin/exec"
 FILE_JS="$MODPATH/webroot/main.js"
