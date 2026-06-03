@@ -3,6 +3,8 @@ const DATADIR = "/data/adb/magic_v2ray";
 const PROFILES_FILE = `${DATADIR}/profiles.base64`;
 const ACTIVE_FILE = `${DATADIR}/active_config.txt`;
 const CONFIG_JSON = `${DATADIR}/config.json`;
+const MAGISK_BRIDGE_URL = "http://127.0.0.1:11701/cgi-bin/exec";
+const MAGISK_TOKEN = "__SECRET_TOKEN__";
  
 let profiles = {};
 let activeConfig = null;
@@ -17,7 +19,25 @@ function execShell(command, callback) {
         ksu.exec(command, "{}", cbId);
     } else {
         console.error("[execShell] window.ksu not available");
-        if (callback) callback("");
+        const base64Command = utoa(command);
+        fetch(`${MAGISK_BRIDGE_URL}?token=${encodeURIComponent(MAGISK_TOKEN)}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: "cmd=" + encodeURIComponent(base64Command)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("CGI Server returned error status");
+            return response.text();
+        })
+        .then(stdout => {
+            if (callback) callback(stdout.trim());
+        })
+        .catch(err => {
+            console.error("[execShell] CGI bridge execution failed:", err);
+            if (callback) callback("");
+        });
     }
 }
  

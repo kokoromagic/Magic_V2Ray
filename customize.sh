@@ -26,6 +26,7 @@ ui_print "- Extracting management scripts and Webroot components..."
 unzip -o "$ZIPFILE" "webroot/*" -d "$MODPATH/"
 unzip -j -o "$ZIPFILE" "proxy_control.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "service.sh" -d "$MODPATH"
+unzip -j -o "$ZIPFILE" "action.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "module.prop" -d "$MODPATH"
 
 # 4. Enforce strict executable permissions natively
@@ -37,5 +38,15 @@ if [ ! -d "/data/adb/magic_v2ray" ]; then
     rm -rf "/data/adb/magic_v2ray"
     mkdir -p "/data/adb/magic_v2ray"
 fi
+
+ui_print "- Setup secret token for files"
+RANDOM_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+FILE_ACTION="$MODPATH/action.sh"
+FILE_CGI="$MODPATH/webroot/cgi-bin/exec"
+FILE_JS="$MODPATH/webroot/main.js"
+[ -f "$FILE_ACTION" ] && sed -i "s/__SECRET_TOKEN__/$RANDOM_TOKEN/g" "$FILE_ACTION"
+[ -f "$FILE_CGI" ]    && sed -i "s/__SECRET_TOKEN__/$RANDOM_TOKEN/g" "$FILE_CGI"
+[ -f "$FILE_JS" ]     && sed -i "s/__SECRET_TOKEN__/$RANDOM_TOKEN/g" "$FILE_JS"
+chmod 755 "$FILE_CGI"
 
 ui_print "Magic V2Ray configuration deployment complete!"
