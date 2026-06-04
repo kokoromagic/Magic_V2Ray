@@ -2,7 +2,7 @@
 
 [Xem phiên bản Tiếng Việt](./README_vi.md)
 
-<img width="4096" height="4096" alt="image_0" src="https://github.com/user-attachments/assets/41c830ac-3c5c-43a4-8329-96713cb8a3c2" />
+![screenshot_1](images/screenshot_1.jpg) 
 
 A powerful and easy-to-use internet proxy manager for rooted Android devices. It helps you route all device traffic through a proxy server to secure your connection, bypass restrictions, and share your high-speed connection with other devices.
 

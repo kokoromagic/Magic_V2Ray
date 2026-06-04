@@ -1,6 +1,6 @@
 # Magic V2Ray
 
-<img width="4096" height="4096" alt="image_0" src="https://github.com/user-attachments/assets/41c830ac-3c5c-43a4-8329-96713cb8a3c2" />
+![screenshot_1](images/screenshot_1.jpg)
 
 Một công cụ quản lý proxy Internet mạnh mẽ và dễ sử dụng dành cho các thiết bị Android đã root. Dự án giúp bạn định tuyến toàn bộ lưu lượng mạng của thiết bị qua một proxy server để bảo mật kết nối, vượt tường lửa, đồng thời chia sẻ kết nối tốc độ cao này cho các thiết bị khác.
 
