@@ -24,6 +24,42 @@ let advSettings = {
     pinnedPeerCertSha256: "",
     dnsViaProxy: true
 };
+let currentLang = 'en';
+
+function applyI18n() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[currentLang][key]) {
+            el.innerHTML = i18n[currentLang][key];
+        }
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (i18n[currentLang][key]) {
+            el.setAttribute('placeholder', i18n[currentLang][key]);
+        }
+    });
+    const select = document.getElementById('lang-select');
+    if (select) select.value = currentLang;
+}
+
+function t(key, variables = {}) {
+    let text = i18n[currentLang][key] || i18n['en'][key] || key;
+    Object.keys(variables).forEach(v => {
+        text = text.replace(new RegExp(`{${v}}`, 'g'), variables[v]);
+    });
+    return text;
+}
+
+function changeLanguage(lang) {
+    if (!i18n[lang]) return;
+    currentLang = lang;
+    advSettings.lang = lang;
+    applyI18n();
+    updateStatusDisplay();
+    renderProfiles();
+    saveAdvancedSettingsForm(true); 
+}
  
 function execShell(command, callback) {
     if (typeof ksu === "object" && typeof ksu.exec === "function") {
@@ -99,6 +135,7 @@ function loadState(callback) {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadState(() => {
+        applyI18n();
         updateStatusDisplay();
         renderProfiles();
     });
@@ -108,7 +145,7 @@ function updateStatusDisplay() {
     execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
         const badge = document.getElementById('service-status');
         const s = status || 'stopped';
-        badge.innerText = `Status: ${s.toUpperCase()}`;
+        badge.innerText = t('status_prefix') + s.toUpperCase();
         badge.className = `status-badge ${s === 'running' ? 'active' : 'inactive'}`;
     });
 }
@@ -131,7 +168,7 @@ function toggleService(action) {
     }
     execShell(`sh ${MODDIR}/proxy_control.sh ${action}`, () => {
         const badge = document.getElementById('service-status');
-        badge.innerText = `Status: Loading...`;
+        badge.innerText = t('status_loading');
         badge.className = 'status-badge active';
         setTimeout(updateStatusDisplay, 1200);
     });
@@ -163,21 +200,21 @@ const extractUrisFromText = (text) => {
  
 function processImport() {
     const input = document.getElementById('import-input').value.trim();
-    if (!input) return showToast("Please paste a valid configuration or link.", "error");
- 
+    if (!input) return showToast(t('toast_empty_import'), "error");
+
     if (input.startsWith('http://') || input.startsWith('https://')) {
         let domain;
         try {
             domain = new URL(input).hostname;
         } catch (e) {
-            return showToast("Invalid Subscription Link Format.", "error");
+            return showToast(t('toast_invalid_sub'), "error");
         }
         fetchSubscription(domain, input);
     } else {
         const xrayConfigs = extractUrisFromText(input);
         parseAndAppendNodes("Manual", xrayConfigs, null);
     }
- 
+
     document.getElementById('import-input').value = "";
 }
 
@@ -185,10 +222,10 @@ function fetchSubscription(category, url, isReload = false) {
     const escapedUrl = url.replace(/'/g, "'\\''");
     execShell(`curl -sLk --max-time 15 '${escapedUrl}'`, (res) => {
         if (!res || res.trim() === "") {
-            return showToast("Failed to fetch.\nReason: Network unreachable or curl not available.", "error");
+            return showToast(t('toast_fetch_failed'), "error");
         }
         if (res.includes("Failed to connect") || res.includes("Could not resolve")) {
-            return showToast("Failed to fetch.\nReason: " + res.split('\n')[0], "error");
+            return showToast(t('toast_fetch_reason') + res.split('\n')[0], "error");
         }
 
         let parsedContent = res.trim();
@@ -211,7 +248,7 @@ function fetchSubscription(category, url, isReload = false) {
  
 function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false) {
     if (!Array.isArray(xrayConfigs) || xrayConfigs.length === 0) {
-        return showToast("No valid configs extracted.\nSupported: vless://, vmess://, trojan://", "error");
+        return showToast(t('toast_no_configs_extracted'), "error");
     }
 
     if (isReload && profiles[category]) {
@@ -239,7 +276,7 @@ function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false
     });
 
     if (isReload) {
-        showToast(`Reloaded complete! Got ${profiles[category].nodes.length} node(s) for "${category}".`, "success");
+        showToast(t('toast_reload_success', { count: profiles[category].nodes.length, cat: category }), "success");
         if (activeConfig && activeConfig.startsWith(category + ':')) {
             const [_, currentId] = activeConfig.split(':');
             const stillExists = profiles[category].nodes.some(n => n.id === currentId);
@@ -250,9 +287,9 @@ function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false
         }
     } else {
         if (importedCount === 0) {
-            showToast("No new or valid configs extracted.", "info");
+            showToast(t('toast_no_new_configs'), "info");
         } else {
-            showToast(`Imported ${importedCount} node(s) into "${category}".`, "info");
+            showToast(t('toast_imported_count', { count: importedCount, cat: category }), "info");
         }
     }
  
@@ -263,7 +300,7 @@ function parseAndAppendNodes(category, xrayConfigs, url = null, isReload = false
 function reloadCategory(category) {
     const catData = profiles[category];
     if (!catData || !catData.url) {
-        return showToast("This category does not have a subscription URL to reload.", "info");
+        return showToast(t('toast_no_sub_url'), "info");
     }
     fetchSubscription(category, catData.url, true);
 }
@@ -360,7 +397,7 @@ function renderProfiles() {
     const categories = Object.keys(profiles).filter(c => profiles[c]?.nodes?.length > 0);
     if (categories.length === 0) {
         container.innerHTML = `<p style="color: var(--text-muted); font-size:14px; text-align:center; padding: 24px 0;">
-            No configurations yet.<br>Paste a link or node string above.
+            ${t('no_configs')}
         </p>`;
         return;
     }
@@ -371,12 +408,12 @@ function renderProfiles() {
         group.innerHTML = `
             <div class="category-header" style="position: relative; display: flex; justify-content: space-between; align-items: center;">
                 <strong>${escapeHtml(category)} (${profiles[category].nodes.length})</strong>
-                
+
                 <div class="category-menu-container">
                     <button class="btn-menu-trigger" onclick="toggleCategoryMenu(event, this)">⋮</button>
                     <div class="category-dropdown-menu">
-                        ${hasUrl ? `<button onclick="reloadCategory('${escapeAttr(category)}'); closeAllMenus();">Reload</button>` : ''}
-                        <button class="btn-delete-item" onclick="removeCategory('${escapeAttr(category)}'); closeAllMenus();">Delete</button>
+                        ${hasUrl ? `<button onclick="reloadCategory('${escapeAttr(category)}'); closeAllMenus();">${t('menu_reload')}</button>` : ''}
+                        <button class="btn-delete-item" onclick="removeCategory('${escapeAttr(category)}'); closeAllMenus();">${t('menu_delete')}</button>
                     </div>
                 </div>
             </div>
@@ -463,6 +500,9 @@ loadState = function(callback) {
 };
 
 function bindSettingsToFormView() {
+    currentLang = advSettings.lang || "en";
+    applyI18n();
+
     document.getElementById('set-loglevel').value = advSettings.loglevel || "debug";
     document.getElementById('set-sniffing').checked = advSettings.sniffing;
     document.getElementById('set-routeonly').checked = advSettings.routeOnly;
@@ -483,7 +523,7 @@ function bindSettingsToFormView() {
     document.getElementById('set-mtu').value = advSettings.mtu || 1350;
 }
 
-function saveAdvancedSettingsForm() {
+function saveAdvancedSettingsForm(isLangOnly = false) {
     advSettings.loglevel = document.getElementById('set-loglevel').value;
     advSettings.sniffing = document.getElementById('set-sniffing').checked;
     advSettings.routeOnly = document.getElementById('set-routeonly').checked;
@@ -501,11 +541,16 @@ function saveAdvancedSettingsForm() {
 
     advSettings.mtu = parseInt(document.getElementById('set-mtu').value) || 1350;
 
+    advSettings.lang = currentLang;
+
     const jsonStr = JSON.stringify(advSettings);
     const base64Encoded = utoa(jsonStr);
     
     execShell(`printf '%s' '${base64Encoded}' > '${SETTINGS_FILE}'`, () => {
-        showToast("Advanced settings saved successfully!", "success");
+        if (isLangOnly) {
+            return;
+        }
+        showToast(t('toast_settings_saved'), "success");
         
         if (activeConfig) {
             const [category, id] = activeConfig.split(':');

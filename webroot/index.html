@@ -8,43 +8,51 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Magic V2Ray</h1>
-            <div class="status-badge" id="service-status">Status: Checking...</div>
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>Magic V2Ray</h1>
+                <div class="status-badge" id="service-status">Status: Checking...</div>
+            </div>
+            <div class="lang-switcher">
+                <select id="lang-select" onchange="changeLanguage(this.value)" style="padding: 4px 8px; border-radius: 4px; background: var(--bg-panel, #222); color: var(--text-main, #fff); border: 1px solid #444;">
+                    <option value="en">English</option>
+                    <option value="vi">Tiếng Việt</option>
+                </select>
+            </div>
         </header>
 
         <div class="tabs-navigation">
-            <button class="tab-btn active" onclick="switchTab('tab-dashboard')">Dashboard</button>
-            <button class="tab-btn" onclick="switchTab('tab-settings')">Traffic Settings</button>
+            <button class="tab-btn active" onclick="switchTab('tab-dashboard')" data-i18n="tab_dashboard">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('tab-settings')" data-i18n="tab_settings">Traffic Settings</button>
         </div>
 
         <div id="tab-dashboard" class="tab-content active">
             <section class="control-actions">
-                <button class="btn btn-start" onclick="toggleService('start')">Start Engine</button>
-                <button class="btn btn-stop" onclick="toggleService('stop')">Stop Engine</button>
+                <button class="btn btn-start" onclick="toggleService('start')" data-i18n="btn_start">Start Engine</button>
+                <button class="btn btn-stop" onclick="toggleService('stop')" data-i18n="btn_stop">Stop Engine</button>
             </section>
 
             <section class="import-section">
-                <h3>Import Configuration Profile</h3>
-                <textarea id="import-input" placeholder="Paste Sub Link (https://...) or Manual String (vless://, vmess://, trojan://) here..."></textarea>
-                <button class="btn btn-primary" onclick="processImport()">Process Connection Link</button>
+                <h3 data-i18n="import_title">Import Configuration Profile</h3>
+                <textarea id="import-input" data-i18n-placeholder="import_placeholder" placeholder="Paste Sub Link (https://...) or Manual String (vless://, vmess://, trojan://) here..."></textarea>
+                <button class="btn btn-primary" onclick="processImport()" data-i18n="btn_import">Process Connection Link</button>
             </section>
 
             <section class="profiles-section">
-                <h3>Connection Categories</h3>
+                <h3 data-i18n="categories_title">Connection Categories</h3>
                 <div id="profiles-container"></div>
             </section>
         </div>
 
         <div id="tab-settings" class="tab-content">
             <section class="settings-form-panel">
-                <h3>Advanced Engine Settings</h3>
+                <h3 data-i18n="adv_settings_title">Advanced Engine Settings</h3>
                 
                 <div class="settings-group-box">
-                    <h4>Routing & Core Protocol</h4>
+                    <h4 data-i18n="group_routing">Routing & Core Protocol</h4>
                     
                     <div class="setting-item-row">
-                        <label>Level Logging</label>
+                        <label data-i18n="lbl_loglevel">Level Logging</label>
                         <select id="set-loglevel">
                             <option value="debug">Debug</option>
                             <option value="info">Info</option>
@@ -54,39 +62,39 @@
                     </div>
 
                     <div class="setting-item-row toggle-row">
-                        <label for="set-sniffing">Enable Sniffing<small>Sniff domains from packet stream</small></label>
+                        <label for="set-sniffing"><span data-i18n="lbl_sniffing">Enable Sniffing</span><small data-i18n="desc_sniffing">Sniff domains from packet stream</small></label>
                         <input type="checkbox" id="set-sniffing">
                     </div>
 
                     <div class="setting-item-row toggle-row">
-                        <label for="set-routeonly">Enable RouteOnly<small>Only sniff for route filtering</small></label>
+                        <label for="set-routeonly"><span data-i18n="lbl_routeonly">Enable RouteOnly</span><small data-i18n="desc_routeonly">Only sniff for route filtering</small></label>
                         <input type="checkbox" id="set-routeonly">
                     </div>
 
                     <div class="setting-item-row toggle-row">
-                        <label for="set-preferipv6">Prefer IPv6<small>Prioritize IPv6 address routes</small></label>
+                        <label for="set-preferipv6"><span data-i18n="lbl_preferipv6">Prefer IPv6</span><small data-i18n="desc_preferipv6">Prioritize IPv6 address routes</small></label>
                         <input type="checkbox" id="set-preferipv6">
                     </div>
 
                     <div class="setting-item-row toggle-row">
-                        <label for="set-dnsviaproxy">Resolve DNS via Proxy<small>Wrap and route all DNS resolver via Server</small></label>
+                        <label for="set-dnsviaproxy"><span data-i18n="lbl_dnsviaproxy">Resolve DNS via Proxy</span><small data-i18n="desc_dnsviaproxy">Wrap and route all DNS resolver via Server</small></label>
                         <input type="checkbox" id="set-dnsviaproxy">
                     </div>
 
                     <div class="setting-item-row">
-                        <label>Pinned Peer Cert SHA256<small>Pin the SHA256 hash of the server certificate.</small></label>
+                        <label><span data-i18n="lbl_pinned_cert">Pinned Peer Cert SHA256</span><small data-i18n="desc_pinned_cert">Pin the SHA256 hash of the server certificate.</small></label>
                         <input type="text" id="set-pinned-cert" placeholder="">
                     </div>
                 </div>
 
                 <div class="settings-group-box">
                     <div class="setting-item-row toggle-row">
-                        <h4>Multiplexing (MUX)</h4>
+                        <h4 data-i18n="group_mux">Multiplexing (MUX)</h4>
                         <input type="checkbox" id="set-mux" onchange="toggleSubSettingField('set-mux', 'mux-sub-fields')">
                     </div>
                     <div id="mux-sub-fields" class="sub-setting-panel">
                         <div class="setting-item-row">
-                            <label>Max Concurrency Connections</label>
+                            <label data-i18n="lbl_mux_concurrency">Max Concurrency Connections</label>
                             <input type="number" id="set-mux-connections" min="1" max="1024" value="8">
                         </div>
                     </div>
@@ -94,40 +102,41 @@
 
                 <div class="settings-group-box">
                     <div class="setting-item-row toggle-row">
-                        <h4>Firewall Fragment (Anti-DPI)</h4>
+                        <h4 data-i18n="group_fragment">Firewall Fragment (Anti-DPI)</h4>
                         <input type="checkbox" id="set-fragment" onchange="toggleSubSettingField('set-fragment', 'fragment-sub-fields')">
                     </div>
                     <div id="fragment-sub-fields" class="sub-setting-panel">
                         <div class="setting-item-row">
-                            <label>Fragment Packets Target</label>
+                            <label data-i18n="lbl_frag_packets">Fragment Packets Target</label>
                             <select id="set-fragment-packets">
                                 <option value="tlshello">tlshello</option>
                             </select>
                         </div>
                         <div class="setting-item-row">
-                            <label>Fragment Length (min-max)</label>
+                            <label data-i18n="lbl_frag_length">Fragment Length (min-max)</label>
                             <input type="text" id="set-fragment-length" placeholder="50-100">
                         </div>
                         <div class="setting-item-row">
-                            <label>Fragment Interval (min-max)</label>
+                            <label data-i18n="lbl_frag_interval">Fragment Interval (min-max)</label>
                             <input type="text" id="set-fragment-interval" placeholder="10-20">
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-group-box">
-                    <h4>Network Interfaces</h4>
+                    <h4 data-i18n="group_network">Network Interfaces</h4>
                     <div class="setting-item-row">
-                        <label>Maximum Transmission Unit (MTU)</label>
+                        <label data-i18n="lbl_mtu">Maximum Transmission Unit (MTU)</label>
                         <input type="number" id="set-mtu" value="1350">
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-save-settings" onclick="saveAdvancedSettingsForm()">Save & Apply Configurations</button>
+                <button class="btn btn-primary btn-save-settings" onclick="saveAdvancedSettingsForm()" data-i18n="btn_save_settings">Save & Apply Configurations</button>
             </section>
         </div>
     </div>
     <script src="helper.js"></script>
+    <script src="i18n.js"></script>
     <script src="main.js"></script>
     <div id="toast-container" class="toast-container"></div>
 </body>
