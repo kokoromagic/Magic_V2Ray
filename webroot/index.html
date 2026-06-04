@@ -9,39 +9,39 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔮 Magic V2Ray</h1>
+            <h1>Magic V2Ray</h1>
             <div class="status-badge" id="service-status">Status: Checking...</div>
         </header>
 
         <div class="tabs-navigation">
-            <button class="tab-btn active" onclick="switchTab('tab-dashboard')">📊 Dashboard</button>
-            <button class="tab-btn" onclick="switchTab('tab-settings')">⚙️ Traffic Settings</button>
+            <button class="tab-btn active" onclick="switchTab('tab-dashboard')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('tab-settings')">Traffic Settings</button>
         </div>
 
         <div id="tab-dashboard" class="tab-content active">
             <section class="control-actions">
-                <button class="btn btn-start" onclick="toggleService('start')">⚡ Start Engine</button>
-                <button class="btn btn-stop" onclick="toggleService('stop')">🛑 Stop Engine</button>
+                <button class="btn btn-start" onclick="toggleService('start')">Start Engine</button>
+                <button class="btn btn-stop" onclick="toggleService('stop')">Stop Engine</button>
             </section>
 
             <section class="import-section">
-                <h3>📥 Import Configuration Profile</h3>
+                <h3>Import Configuration Profile</h3>
                 <textarea id="import-input" placeholder="Paste Sub Link (https://...) or Manual String (vless://, vmess://, trojan://) here..."></textarea>
                 <button class="btn btn-primary" onclick="processImport()">Process Connection Link</button>
             </section>
 
             <section class="profiles-section">
-                <h3>🗂️ Connection Categories</h3>
+                <h3>Connection Categories</h3>
                 <div id="profiles-container"></div>
             </section>
         </div>
 
         <div id="tab-settings" class="tab-content">
             <section class="settings-form-panel">
-                <h3>⚙️ Advanced Engine Settings</h3>
+                <h3>Advanced Engine Settings</h3>
                 
                 <div class="settings-group-box">
-                    <h4>📡 Routing & Core Protocol</h4>
+                    <h4>Routing & Core Protocol</h4>
                     
                     <div class="setting-item-row">
                         <label>Level Logging</label>
@@ -81,7 +81,7 @@
 
                 <div class="settings-group-box">
                     <div class="setting-item-row toggle-row">
-                        <h4>⛓️ Multiplexing (MUX)</h4>
+                        <h4>Multiplexing (MUX)</h4>
                         <input type="checkbox" id="set-mux" onchange="toggleSubSettingField('set-mux', 'mux-sub-fields')">
                     </div>
                     <div id="mux-sub-fields" class="sub-setting-panel">
@@ -94,7 +94,7 @@
 
                 <div class="settings-group-box">
                     <div class="setting-item-row toggle-row">
-                        <h4>🧩 Firewall Fragment (Anti-DPI)</h4>
+                        <h4>Firewall Fragment (Anti-DPI)</h4>
                         <input type="checkbox" id="set-fragment" onchange="toggleSubSettingField('set-fragment', 'fragment-sub-fields')">
                     </div>
                     <div id="fragment-sub-fields" class="sub-setting-panel">
@@ -116,14 +116,14 @@
                 </div>
 
                 <div class="settings-group-box">
-                    <h4>🛠️ Network Interfaces</h4>
+                    <h4>Network Interfaces</h4>
                     <div class="setting-item-row">
                         <label>Maximum Transmission Unit (MTU)</label>
                         <input type="number" id="set-mtu" value="1350">
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-save-settings" onclick="saveAdvancedSettingsForm()">💾 Save & Apply Configurations</button>
+                <button class="btn btn-primary btn-save-settings" onclick="saveAdvancedSettingsForm()">Save & Apply Configurations</button>
             </section>
         </div>
     </div>

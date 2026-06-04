@@ -370,13 +370,13 @@ function renderProfiles() {
         const hasUrl = !!profiles[category].url;
         group.innerHTML = `
             <div class="category-header" style="position: relative; display: flex; justify-content: space-between; align-items: center;">
-                <strong>📂 ${escapeHtml(category)} (${profiles[category].nodes.length})</strong>
+                <strong>${escapeHtml(category)} (${profiles[category].nodes.length})</strong>
                 
                 <div class="category-menu-container">
                     <button class="btn-menu-trigger" onclick="toggleCategoryMenu(event, this)">⋮</button>
                     <div class="category-dropdown-menu">
-                        ${hasUrl ? `<button onclick="reloadCategory('${escapeAttr(category)}'); closeAllMenus();">🔄 Reload</button>` : ''}
-                        <button class="btn-delete-item" onclick="removeCategory('${escapeAttr(category)}'); closeAllMenus();">🗑️ Delete</button>
+                        ${hasUrl ? `<button onclick="reloadCategory('${escapeAttr(category)}'); closeAllMenus();">Reload</button>` : ''}
+                        <button class="btn-delete-item" onclick="removeCategory('${escapeAttr(category)}'); closeAllMenus();">Delete</button>
                     </div>
                 </div>
             </div>
