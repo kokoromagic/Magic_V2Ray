@@ -29,7 +29,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         fragment_length: "50-100",
         fragment_interval: "10-20",
         mtu: 1350,
-        pinnedPeerCertSha256: ""
+        pinnedPeerCertSha256: "",
+        dnsViaProxy: true
     };
 
     const b64decode = s => {
@@ -163,6 +164,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         };
     }
 
+    const dnsOutboundTag = settings.dnsViaProxy ? "proxy" : "direct";
+
     const fullConfig = {
         log: { 
             loglevel: settings.loglevel || "debug" 
@@ -222,7 +225,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                         "http-test-in",
                     ],
                     "port": 53,
-                    "outboundTag": "direct"
+                    "outboundTag": dnsOutboundTag
                 },
                 {
                     "type": "field",

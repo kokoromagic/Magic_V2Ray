@@ -21,7 +21,8 @@ let advSettings = {
     fragment_length: "50-100",
     fragment_interval: "10-20",
     mtu: 1350,
-    pinnedPeerCertSha256: ""
+    pinnedPeerCertSha256: "",
+    dnsViaProxy: true
 };
  
 function execShell(command, callback) {
@@ -466,6 +467,7 @@ function bindSettingsToFormView() {
     document.getElementById('set-sniffing').checked = advSettings.sniffing;
     document.getElementById('set-routeonly').checked = advSettings.routeOnly;
     document.getElementById('set-preferipv6').checked = advSettings.preferIpv6;
+    document.getElementById('set-dnsviaproxy').checked = advSettings.dnsViaProxy || true;
     document.getElementById('set-pinned-cert').value = advSettings.pinnedPeerCertSha256 || "";
     
     document.getElementById('set-mux').checked = advSettings.mux;
@@ -486,6 +488,7 @@ function saveAdvancedSettingsForm() {
     advSettings.sniffing = document.getElementById('set-sniffing').checked;
     advSettings.routeOnly = document.getElementById('set-routeonly').checked;
     advSettings.preferIpv6 = document.getElementById('set-preferipv6').checked;
+    advSettings.dnsViaProxy = document.getElementById('set-dnsviaproxy').checked;
     advSettings.pinnedPeerCertSha256 = document.getElementById('set-pinned-cert').value.trim();
     
     advSettings.mux = document.getElementById('set-mux').checked;
