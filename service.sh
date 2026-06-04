@@ -67,6 +67,9 @@ clear_routing_rules() {
 
 do_job() {
     local content="$1"
+    if [ "$content" = "wait" ]; then
+        : # Do nothing
+    fi
     if [ "$content" = "start" ]; then
         if [ ! -e /dev/net/tun ]; then
             mkdir -p /dev/net
@@ -190,6 +193,7 @@ while [ "$(getprop sys.boot_completed)" != 1 ]; do
 done
 if [ -e "$DATADIR/config.json" ]; then
     echo "start" > "$PIPE_FILE"
+    echo "wait" > "$PIPE_FILE"
 fi
 } &
 
@@ -256,7 +260,9 @@ inotifyd - /data/misc/net::w | while read -r _; do
         # Need to restart xray
         if get_status; then
             echo "stop" > "$PIPE_FILE"
+            echo "wait" > "$PIPE_FILE"
             echo "start" > "$PIPE_FILE"
+            echo "wait" > "$PIPE_FILE"
         fi
 
         # Remove the old rule

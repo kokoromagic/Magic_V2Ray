@@ -34,6 +34,7 @@ start_proxy() {
 
     # Start xray core and tun2socks in the background
     echo start > "$PIPE_FILE"
+    echo "wait" > "$PIPE_FILE"
 
     echo "Proxy core successfully running!"
 }
@@ -41,6 +42,7 @@ start_proxy() {
 stop_proxy() {
     # Stop xray core and tun2socks in the background
     echo stop > "$PIPE_FILE"
+    echo "wait" > "$PIPE_FILE"
 
     echo "Proxy core successfully stopped!"
 }
