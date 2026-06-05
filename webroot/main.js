@@ -5,7 +5,8 @@ const SETTINGS_FILE = `${DATADIR}/settings.base64`;
 const ACTIVE_FILE = `${DATADIR}/active_config.txt`;
 const CONFIG_JSON = `${DATADIR}/config.json`;
 const MAGISK_BRIDGE_URL = "http://127.17.1.3/cgi-bin/exec";
-const MAGISK_TOKEN = "__SECRET_TOKEN__";
+const urlParams = new URLSearchParams(window.location.search);
+const MAGISK_TOKEN = urlParams.get('token')
  
 let profiles = {};
 let activeConfig = null;
