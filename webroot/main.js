@@ -27,6 +27,9 @@ let advSettings = {
     fakeDns: false
 };
 let currentLang = 'en';
+let currentEditingCategory = null;
+let currentEditingNodeId = null;
+let currentEditingProtocol = null;
 
 function applyI18n() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -420,7 +423,6 @@ function renderProfiles() {
         group.innerHTML = `
             <div class="category-header" style="position: relative; display: flex; justify-content: space-between; align-items: center;">
                 <strong>${escapeHtml(category)} (${profiles[category].nodes.length})</strong>
-
                 <div class="category-menu-container">
                     <button class="btn-menu-trigger" onclick="toggleCategoryMenu(event, this)">⋮</button>
                     <div class="category-dropdown-menu">
@@ -436,14 +438,24 @@ function renderProfiles() {
             const isSelected = activeConfig === `${category}:${node.id}`;
             const item = document.createElement('div');
             item.className = `config-item${isSelected ? ' selected' : ''}`;
-            item.onclick = () => selectNode(category, node.id);
             item.innerHTML = `
-                <div class="config-info">
+                <div class="config-info" style="flex: 1; display: flex; flex-direction: column;">
                     <div class="config-name">${escapeHtml(node.name)}</div>
                     <div class="config-meta">${node.protocol.toUpperCase()} | ${escapeHtml(node.address)}:${escapeHtml(node.port)}</div>
                 </div>
-                ${isSelected ? '<span>📌</span>' : ''}
+                <div class="node-actions-container">
+                    ${isSelected ? '<span>📌</span>' : ''}
+                    <div class="node-menu-container">
+                        <button class="btn-menu-trigger" onclick="toggleNodeMenu(event, this)">⋮</button>
+                        <div class="node-dropdown-menu">
+                            <button onclick="openEditNodeModal(event, '${escapeAttr(category)}', '${node.id}')">${t('menu_edit')}</button>
+                            <button class="btn-delete-item" onclick="deleteNode(event, '${escapeAttr(category)}', '${node.id}')">${t('menu_delete')}</button>
+                        </div>
+                    </div>
+                </div>
             `;
+            
+            item.querySelector('.config-info').onclick = () => selectNode(category, node.id);
             listNode.appendChild(item);
         });
         container.appendChild(group);
@@ -460,9 +472,260 @@ function toggleCategoryMenu(event, button) {
     }
 }
 
+function toggleNodeMenu(event, button) {
+    event.stopPropagation();
+    const currentMenu = button.nextElementSibling;
+    const isOpen = currentMenu.classList.contains('show');
+    closeAllMenus();
+    if (!isOpen) {
+        currentMenu.classList.add('show');
+    }
+}
+
+function deleteNode(event, category, id) {
+    event.stopPropagation();
+    closeAllMenus();
+    if (!profiles[category]) return;
+    profiles[category].nodes = profiles[category].nodes.filter(n => n.id !== id);
+    if (activeConfig === `${category}:${id}`) {
+        activeConfig = null;
+        saveActiveConfig();
+    }
+    saveProfiles();
+    renderProfiles();
+}
+
+function getFullNodeDetails(node) {
+    const uri = node.rawUri.trim();
+    const protocol = node.protocol;
+    let d = {
+        name: node.name || "Unnamed Node",
+        address: node.address || "",
+        port: node.port || "443",
+        uuid: node.uuid || "",
+        encryption: "none",
+        flow: "",
+        network: "tcp",
+        wsPath: "/",
+        wsHost: "",
+        grpcMode: "gun",
+        grpcAuth: "",
+        grpcServiceName: "",
+        security: "none",
+        sni: "",
+        fingerprint: "chrome",
+        alpn: "",
+        publicKey: "",
+        shortId: ""
+    };
+
+    if (protocol === 'vmess') {
+        try {
+            const rawJson = decodeBase64(uri.substring(8));
+            const c = JSON.parse(rawJson);
+            d.address = c.add || "";
+            d.port = c.port || "443";
+            d.uuid = c.id || "";
+            d.encryption = c.scy || "none";
+            d.network = c.net || "tcp";
+            d.security = c.tls || "none";
+            d.sni = c.sni || "";
+            d.alpn = c.alpn || "";
+            if (c.net === 'ws') {
+                d.wsPath = c.path || "/";
+                d.wsHost = c.host || "";
+            } else if (c.net === 'grpc') {
+                d.grpcServiceName = c.path || "";
+            }
+        } catch (e) { console.error("Error parsing vmess json", e); }
+    } else {
+        try {
+            const u = new URL(uri);
+            const p = new URLSearchParams(u.search);
+            d.uuid = decodeURIComponent(u.username);
+            d.address = u.hostname;
+            d.port = u.port || "443";
+            d.network = p.get('type') || 'tcp';
+            d.security = p.get('security') || 'none';
+            d.flow = p.get('flow') || '';
+            d.sni = p.get('sni') || '';
+            d.alpn = p.get('alpn') || '';
+            d.fingerprint = p.get('fp') || 'chrome';
+            
+            if (d.network === 'ws') {
+                d.wsPath = p.get('path') || '/';
+                d.wsHost = p.get('host') || '';
+            } else if (d.network === 'grpc') {
+                d.grpcServiceName = p.get('serviceName') || p.get('path') || '';
+                d.grpcMode = p.get('mode') || 'gun';
+                d.grpcAuth = p.get('authority') || '';
+            }
+            if (d.security === 'reality') {
+                d.publicKey = p.get('pbk') || '';
+                d.shortId = p.get('sid') || '';
+            }
+        } catch (e) { console.error("Error parsing standard URL mapping", e); }
+    }
+    return d;
+}
+
+function serializeNodeDetailsToUri(d, protocol) {
+    if (protocol === 'vmess') {
+        let c = {
+            v: "2", ps: d.name, add: d.address, port: parseInt(d.port) || 443, id: d.uuid,
+            aid: 0, scy: d.encryption || "none", net: d.network, type: "none",
+            host: d.network === 'ws' ? d.wsHost : "",
+            path: d.network === 'ws' ? d.wsPath : (d.network === 'grpc' ? d.grpcServiceName : ""),
+            tls: d.security === 'tls' ? 'tls' : 'none',
+            sni: d.security === 'tls' ? d.sni : "",
+            alpn: d.security === 'tls' ? d.alpn : ""
+        };
+        return "vmess://" + utoa(JSON.stringify(c));
+    } else {
+        let urlStr = `${protocol}://${encodeURIComponent(d.uuid)}@${d.address}:${d.port}`;
+        let params = new URLSearchParams();
+        if (d.network !== 'tcp') params.set('type', d.network);
+        if (d.security !== 'none') params.set('security', d.security);
+        if (protocol === 'vless' && d.flow && (d.security === 'tls' || d.security === 'reality')) params.set('flow', d.flow);
+        if (d.security === 'tls' || d.security === 'reality') {
+            if (d.sni) params.set('sni', d.sni);
+            if (d.alpn) params.set('alpn', d.alpn);
+            if (d.fingerprint) params.set('fp', d.fingerprint);
+        }
+        if (d.network === 'ws') {
+            if (d.wsPath) params.set('path', d.wsPath);
+            if (d.wsHost) params.set('host', d.wsHost);
+        } else if (d.network === 'grpc') {
+            if (d.grpcServiceName) params.set('serviceName', d.grpcServiceName);
+            if (d.grpcMode && d.grpcMode !== 'gun') params.set('mode', d.grpcMode);
+            if (d.grpcAuth) params.set('authority', d.grpcAuth);
+        }
+        if (d.security === 'reality') {
+            if (d.publicKey) params.set('pbk', d.publicKey);
+            if (d.shortId) params.set('sid', d.shortId);
+        }
+        let pStr = params.toString();
+        if (pStr) urlStr += "?" + pStr;
+        if (d.name) urlStr += "#" + encodeURIComponent(d.name);
+        return urlStr;
+    }
+}
+
+function openEditNodeModal(event, category, id) {
+    event.stopPropagation();
+    closeAllMenus();
+
+    const node = profiles[category]?.nodes?.find(n => n.id === id);
+    if (!node) return;
+
+    currentEditingCategory = category;
+    currentEditingNodeId = id;
+    currentEditingProtocol = node.protocol;
+    const d = getFullNodeDetails(node);
+
+    document.getElementById('edit-remarks').value = d.name;
+    document.getElementById('edit-address').value = d.address;
+    document.getElementById('edit-port').value = d.port;
+    document.getElementById('edit-uuid').value = d.uuid;
+    document.getElementById('edit-encryption').value = d.encryption;
+    document.getElementById('edit-flow').value = d.flow;
+    document.getElementById('edit-network').value = d.network;
+    document.getElementById('edit-ws-path').value = d.wsPath;
+    document.getElementById('edit-ws-host').value = d.wsHost;
+    document.getElementById('edit-grpc-mode').value = d.grpcMode;
+    document.getElementById('edit-grpc-auth').value = d.grpcAuth;
+    document.getElementById('edit-grpc-service').value = d.grpcServiceName;
+    document.getElementById('edit-security').value = d.security;
+    document.getElementById('edit-sni').value = d.sni;
+    document.getElementById('edit-fingerprint').value = d.fingerprint;
+    document.getElementById('edit-alpn').value = d.alpn;
+    document.getElementById('edit-pbk').value = d.publicKey;
+    document.getElementById('edit-sid').value = d.shortId;
+    document.getElementById('field-group-encryption').style.display = (node.protocol === 'trojan') ? 'none' : 'flex';
+    document.getElementById('field-group-flow').style.display = (node.protocol === 'vless') ? 'flex' : 'none';
+    updateEditFormVisibility();
+    applyI18n();
+    document.getElementById('edit-node-modal').style.display = 'block';
+}
+
+function updateEditFormVisibility() {
+    const net = document.getElementById('edit-network').value;
+    const sec = document.getElementById('edit-security').value;
+    document.getElementById('subfields-ws').style.display = (net === 'ws') ? 'flex' : 'none';
+    document.getElementById('subfields-grpc').style.display = (net === 'grpc') ? 'flex' : 'none';
+    document.getElementById('subfields-tls').style.display = (sec === 'tls' || sec === 'reality') ? 'flex' : 'none';
+    document.getElementById('subfields-reality').style.display = (sec === 'reality') ? 'flex' : 'none';
+    if (currentEditingProtocol === 'vless') {
+        document.getElementById('field-group-flow').style.display = (sec === 'tls' || sec === 'reality') ? 'flex' : 'none';
+    }
+}
+
+function closeEditNodeModal() {
+    document.getElementById('edit-node-modal').style.display = 'none';
+    currentEditingCategory = null;
+    currentEditingNodeId = null;
+    currentEditingProtocol = null;
+}
+
+function saveEditedNode() {
+    if (!currentEditingCategory || !currentEditingNodeId) return;
+
+    const nodeIdx = profiles[currentEditingCategory]?.nodes?.findIndex(n => n.id === currentEditingNodeId);
+    if (nodeIdx === -1) return;
+
+    const d = {
+        name: document.getElementById('edit-remarks').value.trim() || "Unnamed Node",
+        address: document.getElementById('edit-address').value.trim(),
+        port: document.getElementById('edit-port').value.trim() || "443",
+        uuid: document.getElementById('edit-uuid').value.trim(),
+        encryption: document.getElementById('edit-encryption').value.trim(),
+        flow: document.getElementById('edit-flow').value,
+        network: document.getElementById('edit-network').value,
+        wsPath: document.getElementById('edit-ws-path').value.trim() || "/",
+        wsHost: document.getElementById('edit-ws-host').value.trim(),
+        grpcMode: document.getElementById('edit-grpc-mode').value,
+        grpcAuth: document.getElementById('edit-grpc-auth').value.trim(),
+        grpcServiceName: document.getElementById('edit-grpc-service').value.trim(),
+        security: document.getElementById('edit-security').value,
+        sni: document.getElementById('edit-sni').value.trim(),
+        fingerprint: document.getElementById('edit-fingerprint').value,
+        alpn: document.getElementById('edit-alpn').value.trim(),
+        publicKey: document.getElementById('edit-pbk').value.trim(),
+        shortId: document.getElementById('edit-sid').value.trim()
+    };
+
+    const newUri = serializeNodeDetailsToUri(d, currentEditingProtocol);
+
+    profiles[currentEditingCategory].nodes[nodeIdx] = {
+        id: currentEditingNodeId,
+        name: d.name,
+        protocol: currentEditingProtocol,
+        address: d.address,
+        port: d.port,
+        uuid: d.uuid,
+        security: d.security,
+        rawUri: newUri
+    };
+
+    saveProfiles();
+    closeEditNodeModal();
+    renderProfiles();
+
+    if (activeConfig === `${currentEditingCategory}:${currentEditingNodeId}`) {
+        const xrayConfig = convert_uri_to_xray_json(newUri, advSettings);
+        execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
+            execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
+                if (status === 'running') {
+                    toggleService('restart');
+                }
+            });
+        });
+    }
+}
+
 function closeAllMenus() {
-    const menus = document.querySelectorAll('.category-dropdown-menu');
-    menus.forEach(menu => menu.classList.remove('show'));
+    document.querySelectorAll('.category-dropdown-menu').forEach(menu => menu.classList.remove('show'));
+    document.querySelectorAll('.node-dropdown-menu').forEach(menu => menu.classList.remove('show'));
 }
 
 document.addEventListener('click', () => {

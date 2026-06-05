@@ -144,5 +144,125 @@
     <script src="i18n.js"></script>
     <script src="main.js"></script>
     <div id="toast-container" class="toast-container"></div>
+    <div id="edit-node-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-window">
+            <header class="modal-header">
+                <button class="modal-icon-btn" onclick="closeEditNodeModal()">←</button>
+                <h2 id="modal-edit-title-text" data-i18n="modal_edit_title">Config settings</h2>
+                <button class="modal-icon-btn check-btn" onclick="saveEditedNode()">✓</button>
+            </header>
+            <div class="modal-body">
+                <div class="edit-item-field">
+                    <label data-i18n="lbl_remarks">Remarks</label>
+                    <input type="text" id="edit-remarks">
+                </div>
+                <div class="edit-item-field">
+                    <label data-i18n="lbl_address">Address</label>
+                    <input type="text" id="edit-address">
+                </div>
+                <div class="edit-item-field">
+                    <label data-i18n="lbl_port">Port</label>
+                    <input type="number" id="edit-port">
+                </div>
+                <div class="edit-item-field">
+                    <label data-i18n="lbl_id">ID / Password</label>
+                    <input type="text" id="edit-uuid">
+                </div>
+                <div class="edit-item-field" id="field-group-encryption">
+                    <label data-i18n="lbl_encryption">Encryption</label>
+                    <input type="text" id="edit-encryption" placeholder="none">
+                </div>
+                <div class="edit-item-field" id="field-group-flow">
+                    <label data-i18n="lbl_flow">Flow</label>
+                    <select id="edit-flow">
+                        <option value="">none</option>
+                        <option value="xtls-rprx-vision">xtls-rprx-vision</option>
+                    </select>
+                </div>
+
+                <div class="modal-section-divider" data-i18n="categories_title">TRANSPORT</div>
+                <div class="edit-item-field">
+                    <label data-i18n="lbl_transport_net">Network</label>
+                    <select id="edit-network" onchange="updateEditFormVisibility()">
+                        <option value="tcp">tcp</option>
+                        <option value="ws">ws</option>
+                        <option value="grpc">grpc</option>
+                    </select>
+                </div>
+                
+                <div id="subfields-ws" class="conditional-fields">
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_ws_path">WebSocket Path</label>
+                        <input type="text" id="edit-ws-path" placeholder="/">
+                    </div>
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_ws_host">WebSocket Host</label>
+                        <input type="text" id="edit-ws-host">
+                    </div>
+                </div>
+
+                <div id="subfields-grpc" class="conditional-fields">
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_grpc_mode">gRPC mode</label>
+                        <select id="edit-grpc-mode">
+                            <option value="gun">gun</option>
+                            <option value="multi">multi</option>
+                        </select>
+                    </div>
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_grpc_auth">gRPC Authority</label>
+                        <input type="text" id="edit-grpc-auth">
+                    </div>
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_grpc_service">gRPC serviceName</label>
+                        <input type="text" id="edit-grpc-service">
+                    </div>
+                </div>
+
+                <div class="modal-section-divider" data-i18n="lbl_tls">SECURITY</div>
+                <div class="edit-item-field">
+                    <label data-i18n="lbl_tls">TLS</label>
+                    <select id="edit-security" onchange="updateEditFormVisibility()">
+                        <option value="none">none</option>
+                        <option value="tls">tls</option>
+                        <option value="reality">reality</option>
+                    </select>
+                </div>
+
+                <div id="subfields-tls" class="conditional-fields">
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_sni">SNI</label>
+                        <input type="text" id="edit-sni">
+                    </div>
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_fingerprint">Fingerprint</label>
+                        <select id="edit-fingerprint">
+                            <option value="chrome">chrome</option>
+                            <option value="firefox">firefox</option>
+                            <option value="safari">safari</option>
+                            <option value="edge">edge</option>
+                            <option value="qq">qq</option>
+                            <option value="random">random</option>
+                        </select>
+                    </div>
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_alpn">ALPN</label>
+                        <input type="text" id="edit-alpn" placeholder="h2,http/1.1">
+                    </div>
+                </div>
+
+                <div id="subfields-reality" class="conditional-fields">
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_pbk">Public Key</label>
+                        <input type="text" id="edit-pbk">
+                    </div>
+                    <div class="edit-item-field">
+                        <label data-i18n="lbl_sid">Short ID</label>
+                        <input type="text" id="edit-sid">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
