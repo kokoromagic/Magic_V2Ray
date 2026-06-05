@@ -49,7 +49,8 @@ const i18n = {
         toast_no_new_configs: "No new or valid configs extracted.",
         toast_imported_count: "Imported {count} node(s) into \"{cat}\".",
         toast_no_sub_url: "This category does not have a subscription URL to reload.",
-        toast_settings_saved: "Advanced settings saved successfully!"
+        toast_settings_saved: "Advanced settings saved successfully!",
+        toast_no_active_config: "Please select a config before starting engine!",
     },
     vi: {
         tab_dashboard: "Bảng Điều Khiển",
@@ -101,6 +102,7 @@ const i18n = {
         toast_no_new_configs: "Không tìm thấy cấu hình mới hoặc hợp lệ.",
         toast_imported_count: "Đã nhập thành công {count} nút vào nhóm \"{cat}\".",
         toast_no_sub_url: "Danh mục này không chứa URL đăng ký để làm mới.",
-        toast_settings_saved: "Cấu hình nâng cao đã được lưu thành công!"
+        toast_settings_saved: "Cấu hình nâng cao đã được lưu thành công!",
+        toast_no_active_config: "Vui lòng chọn một cấu hình trước để kết nối!",
     }
 };

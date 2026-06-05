@@ -162,9 +162,11 @@ function toggleService(action) {
                         updateStatusDisplay();      
                     });
                 });
-                return;
             }
+        } else {
+            showToast(t('toast_no_active_config'), "error");
         }
+        return;
     }
     execShell(`sh ${MODDIR}/proxy_control.sh ${action}`, () => {
         const badge = document.getElementById('service-status');
@@ -373,11 +375,9 @@ function selectNode(category, id) {
     xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
  
     // dump xray config to file and restart service if running
-    execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
+    execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
         renderProfiles();
-        execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
-            if (status === 'running') toggleService('restart');
-        });
+        if (status === 'running') toggleService('restart');
     });
 }
  
