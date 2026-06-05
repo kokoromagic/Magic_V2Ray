@@ -27,6 +27,8 @@ unzip -o "$ZIPFILE" "webroot/*" -d "$MODPATH/"
 unzip -j -o "$ZIPFILE" "proxy_control.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "service.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "action.sh" -d "$MODPATH"
+unzip -j -o "$ZIPFILE" "bin/geoip.dat" -d "$MODPATH/bin"
+unzip -j -o "$ZIPFILE" "bin/geosite.dat" -d "$MODPATH/bin"
 unzip -j -o "$ZIPFILE" "module.prop" -d "$MODPATH"
 
 # 4. Enforce strict executable permissions natively

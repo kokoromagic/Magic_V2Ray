@@ -30,7 +30,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         fragment_interval: "10-20",
         mtu: 1350,
         pinnedPeerCertSha256: "",
-        dnsViaProxy: true
+        dnsViaProxy: true,
+        fakeDns: false
     };
 
     const b64decode = s => {
@@ -166,15 +167,25 @@ function convert_uri_to_xray_json(uri, optional_settings) {
 
     const dnsOutboundTag = settings.dnsViaProxy ? "proxy" : "direct";
 
+    let dnsServers = [
+        "1.1.1.1",
+        "8.8.8.8"
+    ];
+
+    if (settings.fakeDns) {
+        dnsServers.unshift({
+            "address": "fakeip",
+            "domains": ["regexp:.+"],
+            "expectIPs": ["geoip:!private"]
+        });
+    }
+
     const fullConfig = {
         log: { 
             loglevel: settings.loglevel || "debug" 
         }, 
         dns: {
-            servers: [
-                "1.1.1.1",
-                "8.8.8.8"
-            ],
+            servers: dnsServers,
             queryStrategy: settings.preferIpv6 ? "UseIPv6" : "UseIPv4"
         },
         inbounds: [
@@ -216,7 +227,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             }
         ],
         routing: {
-            "domainStrategy": "IPIfNonMatch",
+            "domainStrategy": settings.fakeDns ? "AsIs" : "IPIfNonMatch",
             "rules": [
                 {
                     "type": "field",
@@ -227,6 +238,11 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     "port": 53,
                     "outboundTag": dnsOutboundTag
                 },
+                ...(settings.fakeDns ? [{
+                    "type": "field",
+                    "ip": ["198.18.0.0/15"],
+                    "outboundTag": "proxy"
+                }] : []),
                 {
                     "type": "field",
                     "inboundTag": [

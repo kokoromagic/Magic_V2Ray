@@ -22,7 +22,8 @@ let advSettings = {
     fragment_interval: "10-20",
     mtu: 1350,
     pinnedPeerCertSha256: "",
-    dnsViaProxy: true
+    dnsViaProxy: true,
+    fakeDns: false
 };
 let currentLang = 'en';
 
@@ -508,6 +509,7 @@ function bindSettingsToFormView() {
     document.getElementById('set-routeonly').checked = advSettings.routeOnly;
     document.getElementById('set-preferipv6').checked = advSettings.preferIpv6;
     document.getElementById('set-dnsviaproxy').checked = advSettings.dnsViaProxy || true;
+    document.getElementById('set-fakedns').checked = advSettings.fakeDns || false;
     document.getElementById('set-pinned-cert').value = advSettings.pinnedPeerCertSha256 || "";
     
     document.getElementById('set-mux').checked = advSettings.mux;
@@ -529,6 +531,7 @@ function saveAdvancedSettingsForm(isLangOnly = false) {
     advSettings.routeOnly = document.getElementById('set-routeonly').checked;
     advSettings.preferIpv6 = document.getElementById('set-preferipv6').checked;
     advSettings.dnsViaProxy = document.getElementById('set-dnsviaproxy').checked;
+    advSettings.fakeDns = document.getElementById('set-fakedns').checked;
     advSettings.pinnedPeerCertSha256 = document.getElementById('set-pinned-cert').value.trim();
     
     advSettings.mux = document.getElementById('set-mux').checked;
