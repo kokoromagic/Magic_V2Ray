@@ -94,6 +94,14 @@ function execShell(command, callback) {
         });
     }
 }
+
+function execShellAsync(cmd) {
+    return new Promise((resolve) => {
+        execShell(cmd, (output) => {
+            resolve(output ? output.trim() : "");
+        });
+    });
+}
  
 function saveProfiles() {
     const json = JSON.stringify(profiles);
@@ -222,9 +230,11 @@ function processImport() {
     document.getElementById('import-input').value = "";
 }
 
-function fetchSubscription(category, url, isReload = false) {
+async function fetchSubscription(category, url, isReload = false) {
+    const status = await execShellAsync(`sh ${MODDIR}/proxy_control.sh status`);
     const escapedUrl = url.replace(/'/g, "'\\''");
-    execShell(`curl -sLk --max-time 15 '${escapedUrl}'`, (res) => {
+    const extraArgs = (status === 'running')? "--socks5 127.0.0.1:10808" : "";
+    execShell(`curl ${extraArgs} -sLk --max-time 15 '${escapedUrl}'`, (res) => {
         if (!res || res.trim() === "") {
             return showToast(t('toast_fetch_failed'), "error");
         }
