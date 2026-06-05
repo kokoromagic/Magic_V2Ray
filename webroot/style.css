@@ -232,6 +232,7 @@ textarea {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
+    gap: 16px;
 }
 
 .setting-item-row:last-child {
@@ -242,6 +243,8 @@ textarea {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
+    flex: 1;
+    padding-right: 8px;
 }
 
 .setting-item-row label small {
@@ -250,6 +253,7 @@ textarea {
     color: var(--text-muted);
     font-weight: normal;
     margin-top: 2px;
+    word-break: break-word;
 }
 
 .setting-item-row select,
@@ -265,6 +269,7 @@ textarea {
     max-width: 180px;
     width: 100%;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .setting-item-row input[type="checkbox"] {
@@ -277,6 +282,7 @@ textarea {
     cursor: pointer;
     outline: none;
     transition: background 0.2s ease;
+    flex-shrink: 0;
 }
 
 .setting-item-row input[type="checkbox"]:checked {
