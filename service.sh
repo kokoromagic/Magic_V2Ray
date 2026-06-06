@@ -148,9 +148,13 @@ clear_routing_rules() {
     $iptables -t mangle -X XRAY_MARK 2>/dev/null
     $ip rule del fwmark 1 table 100 priority 1010 2>/dev/null
     # IPv4 hotspot
+    $ip rule del pref 5000 2>/dev/null
+    $ip rule del pref 5010 2>/dev/null
+    $ip rule del pref 5020 2>/dev/null
     $ip rule del pref 5030 2>/dev/null
     $ip rule del pref 5040 2>/dev/null
     $ip rule del pref 5050 2>/dev/null
+    $ip rule del pref 6000 2>/dev/null
     $iptables -D FORWARD -o xraytun0 -j ACCEPT 2>/dev/null
     $iptables -D FORWARD -i xraytun0 -j ACCEPT 2>/dev/null
     $iptables -t mangle -D FORWARD -o xraytun0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1350 2>/dev/null
@@ -236,9 +240,13 @@ do_job() {
             $iptables -I FORWARD -o xraytun0 -j ACCEPT
             $iptables -I FORWARD -i xraytun0 -j ACCEPT
             # STEP 2: Force hotspot private IP ranges to lookup table 100
+            $ip rule add iif lo goto 6000 pref 5000
+            $ip rule add iif xraytun0 lookup main suppress_prefixlength 0 pref 5010
+            $ip rule add iif xraytun0 goto 6000 pref 5020
             $ip rule add from 10.0.0.0/8 lookup 100 pref 5030
             $ip rule add from 172.16.0.0/12 lookup 100 pref 5040
             $ip rule add from 192.168.0.0/16 lookup 100 pref 5050
+            $ip rule add nop pref 6000
             # STEP 3: Adjust TCPMSS to prevent TLS packet fragmentation overhead
             $iptables -t mangle -I FORWARD -o xraytun0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1350
 
