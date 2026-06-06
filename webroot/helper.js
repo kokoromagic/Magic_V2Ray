@@ -332,6 +332,16 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 }] : []),
                 {
                     "type": "field",
+                    "ip": [
+                        "geoip:private"
+                    ],
+                    "domain": [
+                        "geosite:private"
+                    ],
+                    "outboundTag": "direct"
+                },
+                {
+                    "type": "field",
                     "inboundTag": [
                         "socks-test-in",
                         "http-test-in",

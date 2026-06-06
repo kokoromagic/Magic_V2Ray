@@ -151,6 +151,9 @@ clear_routing_rules() {
     $ip rule del pref 5000 2>/dev/null
     $ip rule del pref 5010 2>/dev/null
     $ip rule del pref 5020 2>/dev/null
+    $ip rule del pref 5025 2>/dev/null
+    $ip rule del pref 5026 2>/dev/null
+    $ip rule del pref 5027 2>/dev/null
     $ip rule del pref 5030 2>/dev/null
     $ip rule del pref 5040 2>/dev/null
     $ip rule del pref 5050 2>/dev/null
@@ -243,6 +246,11 @@ do_job() {
             $ip rule add iif lo goto 6000 pref 5000
             $ip rule add iif xraytun0 lookup main suppress_prefixlength 0 pref 5010
             $ip rule add iif xraytun0 goto 6000 pref 5020
+            # * Bypass LAN
+            $ip rule add to 10.0.0.0/8 lookup main pref 5025
+            $ip rule add to 172.16.0.0/12 lookup main pref 5026
+            $ip rule add to 192.168.0.0/16 lookup main pref 5027
+            # * Redirect to xraytun0
             $ip rule add from 10.0.0.0/8 lookup 100 pref 5030
             $ip rule add from 172.16.0.0/12 lookup 100 pref 5040
             $ip rule add from 192.168.0.0/16 lookup 100 pref 5050
