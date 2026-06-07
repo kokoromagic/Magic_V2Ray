@@ -71,6 +71,19 @@ lock_xraytun0() {
     fi
 }
 
+read_table_index() {
+    local iface=$1
+    local error=1
+
+    cat /data/misc/net/rt_tables | while read -r index name; do
+        if [[ "$name" = "$iface" ]]; then
+            echo $index
+            error=0
+        fi
+    done
+
+    return $error
+}
 
 get_active_interface() {
     for iface in /sys/class/net/*; do
@@ -99,9 +112,13 @@ apply_mark_rule() {
 
     remove_mark_rule
 
-    $ip rule add fwmark $FWMARK table "$iface" priority $RULE_PRIORITY
-    $ip -6 rule add fwmark 255 table "$iface" priority $RULE_PRIORITY
-    echo "Applied: fwmark $FWMARK -> table $iface"
+    local iface_index="$(read_table_index "$iface")"
+
+    [ -z "$iface_index" ] && return 1
+
+    $ip rule add fwmark $FWMARK table "$iface_index" priority $RULE_PRIORITY
+    $ip -6 rule add fwmark 255 table "$iface_index" priority $RULE_PRIORITY
+    echo "Applied: fwmark $FWMARK -> table $iface_index ($iface)"
 }
 
 monitor_net_interfaces() {
