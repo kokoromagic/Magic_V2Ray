@@ -483,9 +483,9 @@ function renderProfiles() {
                 </div>
                 <div class="node-actions-container">
                     ${isSelected ? '<span>📌</span>' : ''}
-                    <div class="node-menu-container">
-                        <span id="ping-${category}-${node.id}" class="ping-info"></span>
-                        <button class="btn-menu-trigger" onclick="toggleNodeMenu(event, this)">⋮</button>
+                    <div class="node-menu-container" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; position: relative;">
+                        <span id="ping-${category}-${node.id}" class="ping-info" style="text-align: right; white-space: nowrap;"></span>
+                        <button class="btn-menu-trigger" onclick="toggleNodeMenu(event, this)" style="flex-shrink: 0;">⋮</button>
                         <div class="node-dropdown-menu">
                             <button onclick="openEditNodeModal(event, '${escapeAttr(category)}', '${node.id}')">${t('menu_edit')}</button>
                             <button class="btn-delete-item" onclick="deleteNode(event, '${escapeAttr(category)}', '${node.id}')">${t('menu_delete')}</button>
@@ -1142,19 +1142,25 @@ async function pingCategoryHttp(category) {
             sleep 1
             
             TIME_RES=$(curl --socks5-hostname ${testIp}:${testPort} -s -w "%{time_starttransfer}" --max-time 10 -o /dev/null http://gstatic.com/generate_204 2>/dev/null)
-            
+            IP_RES=""
+            if [ "$(echo "$TIME_RES > 0" | bc 2>/dev/null)" = "1" ] || [ -n "$TIME_RES" ]; then
+                IP_RES=$(curl --socks5-hostname ${testIp}:${testPort} -s --max-time 4 https://ifconfig.me 2>/dev/null)
+            fi
+
             kill -9 $XPID >/dev/null 2>&1
             rm -f ${tmpFile}
-            echo "$TIME_RES"
+            echo "\${TIME_RES}|\${IP_RES}"
         `;
 
         const output = await execShellAsync(cmd);
-        const val = parseFloat(output);
+        const [timePart, ipPart] = output.trim().split('|');
+        const val = parseFloat(timePart);
+        const ip = ipPart ? ipPart.trim() : "";
 
         if (pingSpan) {
             if (!isNaN(val) && val > 0) {
                 const ms = Math.round(val * 1000);
-                pingSpan.innerText = `${ms}ms`;
+                pingSpan.innerText = `${ip} ${ms}ms`;
                 pingSpan.style.color = "var(--green, #00e676)";
             } else {
                 pingSpan.innerText = "?";
