@@ -386,6 +386,12 @@ lock_sysctl "0" "/proc/sys/net/ipv4/conf/all/rp_filter"
 lock_sysctl "0" "/proc/sys/net/ipv4/conf/default/rp_filter"
 
 echo "start_monitor" > "$PIPE_FILE"
+
+until [ "$(getprop sys.boot_completed)" = "1" ]; do
+    sleep 1
+done
+sleep 5
+
 if [ -e "$DATADIR/config.json" ]; then
     echo "Restart previous xray on boot"
     echo "start" > "$PIPE_FILE"
