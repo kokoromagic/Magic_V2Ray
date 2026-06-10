@@ -1650,8 +1650,6 @@ async function pingCategoryHttp(category) {
     const catData = profiles[category];
     if (!catData || !catData.nodes || catData.nodes.length === 0) return;
 
-    showToast(`${t("toast_pinging")}${category}...`, "info");
-
     const CONCURRENCY_LIMIT = 2;
     const nodesToTest = catData.nodes.map((node, index) => ({ node, index }));
 
@@ -1727,6 +1725,7 @@ async function pingCategoryHttp(category) {
 }
 
 async function pingCategoryWithClose(event, category) {
+    showToast(`${t("toast_pinging")}${category}...`, "info");
     const btn = event.currentTarget;
     closeAllMenus();
     btn.disabled = true;
