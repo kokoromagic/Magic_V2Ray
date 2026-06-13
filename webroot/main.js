@@ -1708,7 +1708,7 @@ async function pingCategoryHttp(category) {
 
         let xrayConfigObj;
         try {
-            const rawConfigStr = convert_uri_to_xray_json(node.rawUri, advSettings);
+            const rawConfigStr = convert_uri_to_xray_json(node.rawUri);
             xrayConfigObj = JSON.parse(rawConfigStr);
             xrayConfigObj.inbounds = [{
                 tag: "socks-test-in",
