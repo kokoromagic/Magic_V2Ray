@@ -673,7 +673,7 @@ textarea::placeholder { color: var(--md-outline); }
     font-family: var(--md-font-body);
     font-size: 14px;
     outline: none;
-    max-width: 170px;
+    max-width: 130px;
     width: 100%;
     flex-shrink: 0;
     transition: border-color .2s var(--md-motion-standard), background .2s;
