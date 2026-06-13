@@ -31,7 +31,11 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         mtu: 1350,
         pinnedPeerCertSha256: "",
         dnsViaProxy: true,
-        fakeDns: false
+        localDns: false,
+        fakeDnsLocal: false,
+        vpnDns: "1.1.1.1",
+        foreignDns: "1.1.1.1",
+        domesticDns: "223.5.5.5"
     };
 
     const b64decode = s => {
@@ -386,17 +390,64 @@ function convert_uri_to_xray_json(uri, optional_settings) {
 
     const dnsOutboundTag = settings.dnsViaProxy ? "proxy" : "direct";
 
-    let dnsServers = [
-        "1.1.1.1",
-        "8.8.8.8"
-    ];
+    // Resolve effective fakeip flag — new field (fakeDnsLocal) takes priority when
+    // Local DNS is enabled; fall back to legacy fakeDns for backward compatibility.
+    const useFakeIp = settings.localDns
+        ? settings.fakeDnsLocal
+        : false;
 
-    if (settings.fakeDns) {
-        dnsServers.unshift({
-            "address": "fakeip",
-            "domains": ["regexp:.+"],
-            "expectIPs": ["geoip:!private"]
-        });
+    let dnsServers;
+
+    if (settings.localDns) {
+        // Build a structured DNS server list from the explicit fields.
+        dnsServers = [];
+
+        // 1. FakeIP entry — sits first so it intercepts all domain queries.
+        if (useFakeIp) {
+            dnsServers.push({
+                address: "fakeip",
+                domains: ["regexp:.+"],
+                expectIPs: ["geoip:!private"]
+            });
+        }
+
+        // 2. VPN DNS — only included when FakeIP is NOT active (grayed out in UI when FakeIP is on).
+        if (!useFakeIp && settings.vpnDns && settings.vpnDns.trim()) {
+            dnsServers.push({
+                address: settings.vpnDns.trim(),
+                domains: ["regexp:.+"]
+            });
+        }
+
+        // 3. Domestic DNS — for local/domestic domain resolution, routed direct.
+        if (settings.domesticDns && settings.domesticDns.trim()) {
+            dnsServers.push({
+                address: settings.domesticDns.trim(),
+                domains: ["geosite:cn", "geosite:private"],
+                expectIPs: ["geoip:cn", "geoip:private"],
+                skipFallback: true
+            });
+        }
+
+        // 4. Foreign DNS — fallback for everything else.
+        if (settings.foreignDns && settings.foreignDns.trim()) {
+            dnsServers.push(settings.foreignDns.trim());
+        }
+
+        // Ensure there is always at least one server so Xray doesn't error out.
+        if (dnsServers.length === 0) {
+            dnsServers.push("1.1.1.1");
+        }
+    } else {
+        // Legacy / simple mode: two hardcoded servers, optional fakeip prepend.
+        dnsServers = ["1.1.1.1", "8.8.8.8"];
+        if (useFakeIp) {
+            dnsServers.unshift({
+                address: "fakeip",
+                domains: ["regexp:.+"],
+                expectIPs: ["geoip:!private"]
+            });
+        }
     }
 
     const fullConfig = {
@@ -405,7 +456,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         }, 
         dns: {
             servers: dnsServers,
-            queryStrategy: settings.preferIpv6 ? "UseIPv6" : "UseIPv4"
+            queryStrategy: settings.preferIpv6 ? "UseIPv6" : "UseIPv4",
+            ...(useFakeIp ? { fakedns: [{ ipPool: "198.18.0.0/15", poolSize: 65535 }] } : {})
         },
         inbounds: [
             {
@@ -446,7 +498,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             }
         ],
         routing: {
-            "domainStrategy": settings.fakeDns ? "AsIs" : "IPIfNonMatch",
+            "domainStrategy": useFakeIp ? "AsIs" : "IPIfNonMatch",
             "rules": [
                 {
                     "type": "field",
@@ -457,7 +509,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     "port": 53,
                     "outboundTag": dnsOutboundTag
                 },
-                ...(settings.fakeDns ? [{
+                ...(useFakeIp ? [{
                     "type": "field",
                     "ip": ["198.18.0.0/15"],
                     "outboundTag": "proxy"

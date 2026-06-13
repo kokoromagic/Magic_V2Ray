@@ -24,7 +24,11 @@ let advSettings = {
     mtu: 1350,
     pinnedPeerCertSha256: "",
     dnsViaProxy: true,
-    fakeDns: false
+    localDns: false,
+    fakeDnsLocal: false,
+    vpnDns: "1.1.1.1",
+    foreignDns: "1.1.1.1",
+    domesticDns: "223.5.5.5"
 };
 let currentLang = 'en';
 let currentEditingCategory = null;

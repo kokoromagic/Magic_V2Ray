@@ -101,11 +101,6 @@
                         <input type="checkbox" id="set-dnsviaproxy">
                     </div>
 
-                    <div class="setting-item-row toggle-row">
-                        <label for="set-fakedns"><span data-i18n="lbl_fakedns">Enable Fake DNS</span><small data-i18n="desc_fakedns">Use pool 198.18.0.0/15 to map domains onto virtual IPs instantly</small></label>
-                        <input type="checkbox" id="set-fakedns">
-                    </div>
-
                     <div class="setting-item-row">
                         <label><span data-i18n="lbl_pinned_cert">Pinned Peer Cert SHA256</span><small data-i18n="desc_pinned_cert">Pin the SHA256 hash of the server certificate.</small></label>
                         <input type="text" id="set-pinned-cert" placeholder="">
@@ -153,6 +148,36 @@
                     <div class="setting-item-row">
                         <label data-i18n="lbl_mtu">Maximum Transmission Unit (MTU)</label>
                         <input type="number" id="set-mtu" value="1350">
+                    </div>
+                </div>
+
+                <div class="settings-group-box">
+                    <div class="setting-item-row toggle-row">
+                        <h4 style="margin:0;" data-i18n="group_dns">DNS Configuration</h4>
+                        <input type="checkbox" id="set-localdns" onchange="updateDnsGroupVisibility()">
+                    </div>
+                    <div id="dns-sub-fields" class="sub-setting-panel" style="display:none;">
+
+                        <div class="setting-item-row toggle-row" id="dns-row-fakedns-local">
+                            <label for="set-fakedns-local"><span data-i18n="lbl_fakedns_local">Enable Fake DNS</span><small data-i18n="desc_fakedns_local">Use 198.18.0.0/15 pool to map domains to virtual IPs instantly</small></label>
+                            <input type="checkbox" id="set-fakedns-local" onchange="updateDnsGroupVisibility()">
+                        </div>
+
+                        <div class="setting-item-row" id="dns-row-vpndns">
+                            <label for="set-vpndns"><span data-i18n="lbl_vpndns">VPN DNS (IPv4/IPv6)</span><small data-i18n="desc_vpndns">DNS used inside the tunnel — disabled when Fake DNS is active</small></label>
+                            <input type="text" id="set-vpndns" placeholder="1.1.1.1" value="1.1.1.1">
+                        </div>
+
+                        <div class="setting-item-row" id="dns-row-foreign">
+                            <label for="set-foreign-dns"><span data-i18n="lbl_foreign_dns">Foreign DNS (Optional)</span><small data-i18n="desc_foreign_dns">Resolver for non-domestic domains</small></label>
+                            <input type="text" id="set-foreign-dns" placeholder="1.1.1.1" value="1.1.1.1">
+                        </div>
+
+                        <div class="setting-item-row" id="dns-row-domestic">
+                            <label for="set-domestic-dns"><span data-i18n="lbl_domestic_dns">Domestic DNS (Optional)</span><small data-i18n="desc_domestic_dns">Resolver for domestic/local domains</small></label>
+                            <input type="text" id="set-domestic-dns" placeholder="223.5.5.5" value="223.5.5.5">
+                        </div>
+
                     </div>
                 </div>
 

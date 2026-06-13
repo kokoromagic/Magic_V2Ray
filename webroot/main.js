@@ -1551,6 +1551,35 @@ loadState = function(callback) {
     });
 };
 
+function updateDnsGroupVisibility() {
+    const localDnsOn = document.getElementById('set-localdns').checked;
+    const fakeDnsLocalOn = document.getElementById('set-fakedns-local').checked;
+
+    const subFields = document.getElementById('dns-sub-fields');
+    subFields.style.display = localDnsOn ? '' : 'none';
+
+    // Fake DNS depends on Local DNS
+    const fakeDnsRow = document.getElementById('dns-row-fakedns-local');
+    if (localDnsOn) {
+        fakeDnsRow.classList.remove('setting-row-disabled');
+        document.getElementById('set-fakedns-local').disabled = false;
+    } else {
+        fakeDnsRow.classList.add('setting-row-disabled');
+        document.getElementById('set-fakedns-local').disabled = true;
+    }
+
+    // VPN DNS is disabled when Fake DNS is on
+    const vpnDnsRow = document.getElementById('dns-row-vpndns');
+    const vpnDnsInput = document.getElementById('set-vpndns');
+    if (fakeDnsLocalOn && localDnsOn) {
+        vpnDnsRow.classList.add('setting-row-disabled');
+        vpnDnsInput.disabled = true;
+    } else {
+        vpnDnsRow.classList.remove('setting-row-disabled');
+        vpnDnsInput.disabled = false;
+    }
+}
+
 function bindSettingsToFormView() {
     currentLang = advSettings.lang || "en";
     applyI18n();
@@ -1560,8 +1589,15 @@ function bindSettingsToFormView() {
     document.getElementById('set-routeonly').checked = advSettings.routeOnly;
     document.getElementById('set-preferipv6').checked = advSettings.preferIpv6;
     document.getElementById('set-dnsviaproxy').checked = advSettings.dnsViaProxy || true;
-    document.getElementById('set-fakedns').checked = advSettings.fakeDns || false;
     document.getElementById('set-pinned-cert').value = advSettings.pinnedPeerCertSha256 || "";
+
+    // DNS group
+    document.getElementById('set-localdns').checked = advSettings.localDns || false;
+    document.getElementById('set-fakedns-local').checked = advSettings.fakeDnsLocal || false;
+    document.getElementById('set-vpndns').value = advSettings.vpnDns || "1.1.1.1";
+    document.getElementById('set-foreign-dns').value = advSettings.foreignDns || "1.1.1.1";
+    document.getElementById('set-domestic-dns').value = advSettings.domesticDns || "223.5.5.5";
+    updateDnsGroupVisibility();
     
     document.getElementById('set-mux').checked = advSettings.mux;
     document.getElementById('set-mux-connections').value = advSettings.mux_connections;
@@ -1582,8 +1618,14 @@ function saveAdvancedSettingsForm(isLangOnly = false) {
     advSettings.routeOnly = document.getElementById('set-routeonly').checked;
     advSettings.preferIpv6 = document.getElementById('set-preferipv6').checked;
     advSettings.dnsViaProxy = document.getElementById('set-dnsviaproxy').checked;
-    advSettings.fakeDns = document.getElementById('set-fakedns').checked;
     advSettings.pinnedPeerCertSha256 = document.getElementById('set-pinned-cert').value.trim();
+
+    // DNS group
+    advSettings.localDns = document.getElementById('set-localdns').checked;
+    advSettings.fakeDnsLocal = document.getElementById('set-fakedns-local').checked;
+    advSettings.vpnDns = document.getElementById('set-vpndns').value.trim() || "1.1.1.1";
+    advSettings.foreignDns = document.getElementById('set-foreign-dns').value.trim();
+    advSettings.domesticDns = document.getElementById('set-domestic-dns').value.trim();
     
     advSettings.mux = document.getElementById('set-mux').checked;
     advSettings.mux_connections = parseInt(document.getElementById('set-mux-connections').value) || 8;

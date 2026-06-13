@@ -732,6 +732,13 @@ textarea::placeholder { color: var(--md-outline); }
     margin-top: 8px;
 }
 
+/* Disabled/grayed setting row */
+.setting-row-disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    user-select: none;
+}
+
 /* Save button */
 .btn-save-settings {
     margin-top: 8px;
