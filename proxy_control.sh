@@ -1,10 +1,11 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
 BINDIR="$MODDIR/bin"
-PIDFILE="$MODDIR/run/xray.pid"
-TUN2SOCKS_PIDFILE="$MODDIR/run/tun2socks.pid"
+STUB_DIR=/dev/sysctl_stubs
+PIDFILE="$STUB_DIR/run/xray.pid"
+TUN2SOCKS_PIDFILE="$STUB_DIR/run/tun2socks.pid"
 
-PIPE_FILE="$MODDIR/run/control.pipe"
+PIPE_FILE="$STUB_DIR/run/control.pipe"
 DATADIR="/data/adb/magic_v2ray"
 set -x >"$DATADIR/proxy_control.log" 2>&1
 

@@ -1,7 +1,8 @@
 #!/system/bin/sh
 
 MODDIR=${0%/*}
-PIPE_FILE="$MODDIR/run/control.pipe"
+STUB_DIR=/dev/sysctl_stubs
+PIPE_FILE="$STUB_DIR/run/control.pipe"
 MAGISK_TOKEN="__SECRET_TOKEN__";
 
 echo start_httpd > "$PIPE_FILE"

@@ -2,6 +2,12 @@
 MODDIR=${0%/*}
 BINDIR="$MODDIR/bin"
 DATADIR="/data/adb/magic_v2ray"
+STUB_DIR=/dev/sysctl_stubs
+
+# Prepare working dir
+rm -rf "$STUB_DIR"
+mkdir -p "$STUB_DIR"
+mount -t tmpfs -o "mode=0755,context=u:object_r:proc_net:s0" proc "$STUB_DIR"
 
 grep_prop() {
   local REGEX="s/^$1=//p"
@@ -22,19 +28,14 @@ if [ "$(grep_prop debug)" = "1" ]; then
 fi
 exec > "$DATADIR/service.log" 2>&1
 
-PIDFILE="$MODDIR/run/xray.pid"
-TUN2SOCKS_PIDFILE="$MODDIR/run/tun2socks.pid"
+PIDFILE="$STUB_DIR/run/xray.pid"
+TUN2SOCKS_PIDFILE="$STUB_DIR/run/tun2socks.pid"
 
 # Control pipe for receiving commands from the UI or other components
-PIPE_FILE="$MODDIR/run/control.pipe"
-STUB_DIR=/dev/sysctl_stubs
+PIPE_FILE="$STUB_DIR/run/control.pipe"
 
-rm -rf "$STUB_DIR"
-mkdir -p "$STUB_DIR"
-mount -t tmpfs -o "mode=0755,context=u:object_r:proc_net:s0" proc "$STUB_DIR"
-
-rm -rf "$MODDIR/run"
-mkdir -p "$MODDIR/run"
+rm -rf "$STUB_DIR/run"
+mkdir -p "$STUB_DIR/run"
 mkfifo "$PIPE_FILE"
 XRAY_PID=0
 TUN2SOCKS_PID=0
