@@ -246,7 +246,7 @@ do_job() {
             echo "tun2socks is already running with PID $TUN2SOCKS_PID"
         else
             # Start tun2socks
-            "$BINDIR/tun2socks" -device tun://xraytun0 -proxy socks5://127.0.0.1:10808 -fwmark 255 </dev/null &>"$TUN2SOCKS_LOG" &
+            "$BINDIR/tun2socks" -device tun://xraytun0 -proxy socks5://127.17.1.3:10808 -fwmark 255 </dev/null &>"$TUN2SOCKS_LOG" &
             TUN2SOCKS_PID=$!
             echo "$TUN2SOCKS_PID" > "$TUN2SOCKS_PIDFILE"
             echo "tun2socks is running with PID $TUN2SOCKS_PID"

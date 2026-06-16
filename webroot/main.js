@@ -213,7 +213,7 @@ function processImport() {
 async function fetchSubscription(category, url, isReload = false) {
     const status = await execShellAsync(`sh ${MODDIR}/proxy_control.sh status`);
     const escapedUrl = url.replace(/'/g, "'\\''");
-    const extraArgs = (status === 'running')? "--socks5 127.0.0.1:10808" : "";
+    const extraArgs = (status === 'running')? "--socks5 127.17.1.3:10808" : "";
     execShell(`curl ${extraArgs} -sLk --max-time 15 '${escapedUrl}'`, (res) => {
         if (!res || res.trim() === "") {
             return showToast(t('toast_fetch_failed'), "error");
@@ -1702,7 +1702,7 @@ async function pingCategoryHttp(category) {
             pingSpan.style.color = "var(--text-muted)";
         }
 
-        const testIp = `127.0.0.${2 + (index % 250)}`;
+        const testIp = `127.17.1.${4 + (index % 250)}`;
         const testPort = 21000 + (index % 1000);
         const tmpFile = `/dev/tmp_config_${node.id}.json`;
 

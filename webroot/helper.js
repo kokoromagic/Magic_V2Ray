@@ -463,7 +463,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             {
                 "tag": "socks-test-in",
                 "port": 10808,
-                "listen": "127.0.0.1",
+                "listen": "127.17.1.3",
                 "protocol": "socks",
                 "settings": {
                     "auth": "noauth",
@@ -478,7 +478,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             {
                 "tag": "http-test-in",
                 "port": 10809,
-                "listen": "127.0.0.1",
+                "listen": "127.17.1.3",
                 "protocol": "http",
                 "settings": {
                     "allowTransparent": false
