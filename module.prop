@@ -1,7 +1,7 @@
 id=magic_v2ray
 name=Magic V2Ray
-version=v1.3.2
-versionCode=115
+version=v1.3.3
+versionCode=116
 author=HuskyDG @vincentng295
 description=A system-level transparent proxy routing engine using Xray-core
 debug=0
