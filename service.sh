@@ -29,7 +29,6 @@ fi
 exec > "$DATADIR/service.log" 2>&1
 
 PIDFILE="$STUB_DIR/run/xray.pid"
-TUN2SOCKS_PIDFILE="$STUB_DIR/run/tun2socks.pid"
 
 # Control pipe for receiving commands from the UI or other components
 PIPE_FILE="$STUB_DIR/run/control.pipe"
@@ -223,11 +222,6 @@ do_job() {
         pkill -f "httpd -p 127.17.1.3:80"
     fi
     if [ "$content" = "start" ]; then
-        if [ ! -e /dev/net/tun ]; then
-            mkdir -p /dev/net
-            mknod /dev/net/tun c 10 200
-            chmod 666 /dev/net/tun
-        fi
         STAT_XRAY_EXE=$(stat -L -c "%D:%i" "/proc/$XRAY_PID/exe")
         STAT_XRAY_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/xray")
         if [ $XRAY_PID -gt 0 ] && [ "$STAT_XRAY_EXE" = "$STAT_XRAY_BIN" ]; then
@@ -238,18 +232,7 @@ do_job() {
             XRAY_PID=$!
             echo "$XRAY_PID" > "$PIDFILE"
             echo "Xray is running with PID $XRAY_PID"
-        fi
 
-        STAT_TUN2SOCKS_EXE=$(stat -L -c "%D:%i" "/proc/$TUN2SOCKS_PID/exe")
-        STAT_TUN2SOCKS_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/tun2socks")
-        if [ $TUN2SOCKS_PID -gt 0 ] && [ "$STAT_TUN2SOCKS_EXE" = "$STAT_TUN2SOCKS_BIN" ]; then
-            echo "tun2socks is already running with PID $TUN2SOCKS_PID"
-        else
-            # Start tun2socks
-            "$BINDIR/tun2socks" -device tun://xraytun0 -proxy socks5://127.17.1.3:10808 -fwmark 255 </dev/null &>"$TUN2SOCKS_LOG" &
-            TUN2SOCKS_PID=$!
-            echo "$TUN2SOCKS_PID" > "$TUN2SOCKS_PIDFILE"
-            echo "tun2socks is running with PID $TUN2SOCKS_PID"
             local retry=0
             local max_retry=10
             while [ $retry -lt $max_retry ]; do
@@ -336,16 +319,6 @@ do_job() {
             rm -f "$PIDFILE"
             XRAY_PID=0
         fi
-
-        if [ $TUN2SOCKS_PID -gt 0 ]; then
-            STAT_TUN2SOCKS_EXE=$(stat -L -c "%D:%i" "/proc/$TUN2SOCKS_PID/exe")
-            STAT_TUN2SOCKS_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/tun2socks")
-            if [ "$STAT_TUN2SOCKS_EXE" = "$STAT_TUN2SOCKS_BIN" ]; then
-                kill -9 "$TUN2SOCKS_PID"
-            fi
-            rm -f "$TUN2SOCKS_PIDFILE"
-            TUN2SOCKS_PID=0
-        fi
     fi
     if [ "$content" = "start_monitor" ]; then
         [ $MONITOR_PID -gt 0 ] && kill -9 "$MONITOR_PID"
@@ -392,6 +365,17 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 1
 done
 sleep 5
+
+if [ ! -e /dev/net/tun ]; then
+    mkdir -p /dev/net
+    mknod /dev/net/tun c 10 200
+    chmod 666 /dev/net/tun
+fi
+
+# Start hev-socks5-tunnel
+"$BINDIR/hev-socks5-tunnel" "$MODDIR/tunnel.yml" </dev/null &>"$TUN2SOCKS_LOG" &
+TUN2SOCKS_PID=$!
+echo "hev-socks5-tunnel is running with PID $TUN2SOCKS_PID"
 
 if [ -e "$DATADIR/config.json" ]; then
     echo "Restart previous xray on boot"
