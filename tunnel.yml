@@ -5,7 +5,7 @@ tunnel:
 
 socks5:
   address: 127.17.1.3
-  port: 10808
+  port: 808
   udp: 'udp'
   mark: 255
 

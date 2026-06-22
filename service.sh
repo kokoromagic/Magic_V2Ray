@@ -181,6 +181,7 @@ clear_routing_rules() {
     $iptables -t mangle -F XRAY_MARK
     $iptables -t mangle -X XRAY_MARK
     $ip rule del fwmark 1 table 100 priority 1010
+    $iptables -D OUTPUT -p tcp --dport 808 -d 127.17.1.3 -m owner --uid-owner 9999-2147483647 -j REJECT --reject-with tcp-reset
     # IPv4 hotspot
     $ip rule del pref 5000
     $ip rule del pref 5010
@@ -217,9 +218,29 @@ do_job() {
     fi
     if [ "$content" = "start_httpd" ]; then
         httpd -p 127.17.1.3:80 -h "$MODDIR/webroot"
+        $iptables -t filter -N HTTPD_AUTH
+        $iptables -t filter -F HTTPD_AUTH
+        BROWSERS=$(grep_prop browser "$DATADIR/auth.prop")
+        local IFS=','
+        for pkg in $BROWSERS; do
+            if [ -d "/data/data/$pkg" ]; then
+                BG_UID=$(stat -c '%u' "/data/data/$pkg")
+                if [ ! -z "$BG_UID" ] && [ $BG_UID -ge 10000 ]; then
+                    echo "Accept $pkg with UID $BG_UID"
+                    $iptables -A HTTPD_AUTH -m owner --uid-owner "$BG_UID" -p tcp --dport 80 -d 127.17.1.3 -j ACCEPT
+                fi
+            fi
+        done
+        unset IFS
+        # Ensure no fucking apps can access it
+        $iptables -A HTTPD_AUTH -m owner --uid-owner 10000-2147483647 -p tcp --dport 80 -d 127.17.1.3 -j REJECT --reject-with tcp-reset
+        $iptables -I OUTPUT -p tcp --dport 80 -d 127.17.1.3 -j HTTPD_AUTH
     fi
     if [ "$content" = "stop_httpd" ]; then
         pkill -f "httpd -p 127.17.1.3:80"
+        $iptables -D OUTPUT -p tcp --dport 80 -d 127.17.1.3 -j HTTPD_AUTH
+        $iptables -t filter -F HTTPD_AUTH
+        $iptables -t filter -X HTTPD_AUTH
     fi
     if [ "$content" = "start" ]; then
         STAT_XRAY_EXE=$(stat -L -c "%D:%i" "/proc/$XRAY_PID/exe")
@@ -283,6 +304,8 @@ do_job() {
             $ip rule add nop pref 6000
             # STEP 3: Adjust TCPMSS to prevent TLS packet fragmentation overhead
             $iptables -t mangle -I FORWARD -o xraytun0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1350
+            # Hide proxy from apps
+            $iptables -I OUTPUT -p tcp --dport 808 -d 127.17.1.3 -m owner --uid-owner 9999-2147483647 -j REJECT --reject-with tcp-reset
 
             # IPV6
             # STEP 1: Create tun device and assign IP address
@@ -382,5 +405,8 @@ if [ -e "$DATADIR/config.json" ]; then
     echo "start" > "$PIPE_FILE"
     echo "wait" > "$PIPE_FILE"
 fi
+
+# Start webserver on boot
+do_job "start_httpd"
 
 } &

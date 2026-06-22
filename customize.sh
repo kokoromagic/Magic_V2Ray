@@ -27,7 +27,6 @@ unzip -o "$ZIPFILE" "webroot/*" -d "$MODPATH/"
 unzip -j -o "$ZIPFILE" "proxy_control.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "service.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "tunnel.yml" -d "$MODPATH"
-unzip -j -o "$ZIPFILE" "action.sh" -d "$MODPATH"
 unzip -j -o "$ZIPFILE" "bin/geoip.dat" -d "$MODPATH/bin"
 unzip -j -o "$ZIPFILE" "bin/geosite.dat" -d "$MODPATH/bin"
 unzip -j -o "$ZIPFILE" "module.prop" -d "$MODPATH"
@@ -40,6 +39,12 @@ ui_print "- Setup /data/adb/magic_v2ray directory"
 if [ ! -d "/data/adb/magic_v2ray" ]; then
     rm -rf "/data/adb/magic_v2ray"
     mkdir -p "/data/adb/magic_v2ray"
+fi
+
+if [ ! -f "/data/adb/magic_v2ray/auth.prop" ]; then
+    echo "username=admin" > /data/adb/magic_v2ray/auth.prop
+    echo "password=" >> /data/adb/magic_v2ray/auth.prop # Empty for token
+    echo "browser=com.android.chrome,com.android.browser,com.miui.browser,com.heytap.browser,com.vivo.browser,com.huawei.browser,com.hihonor.browser,com.sec.android.app.sbrowser,org.mozilla.firefox,com.oppo.browser,com.lblw.browser,com.lemall.browser,com.unihertz.browser" >> /data/adb/magic_v2ray/auth.prop
 fi
 
 ui_print "- Setup secret token for files"

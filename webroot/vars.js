@@ -4,9 +4,13 @@ const PROFILES_FILE = `${DATADIR}/profiles.base64`;
 const SETTINGS_FILE = `${DATADIR}/settings.base64`;
 const ACTIVE_FILE = `${DATADIR}/active_config.txt`;
 const CONFIG_JSON = `${DATADIR}/config.json`;
-const MAGISK_BRIDGE_URL = "http://127.17.1.3/cgi-bin/exec";
+
+let MAGISK_BRIDGE_URL = "http://127.17.1.3/cgi-bin/exec";
 const urlParams = new URLSearchParams(window.location.search);
 const MAGISK_TOKEN = urlParams.get('token')
+if (MAGISK_TOKEN) {
+    MAGISK_BRIDGE_URL += `?token=${encodeURIComponent(MAGISK_TOKEN)}`;
+}
  
 let profiles = {};
 let activeConfig = null;

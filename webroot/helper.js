@@ -462,7 +462,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         inbounds: [
             {
                 "tag": "socks-test-in",
-                "port": 10808,
+                "port": 808,
                 "listen": "127.17.1.3",
                 "protocol": "socks",
                 "settings": {
@@ -475,15 +475,6 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     "routeOnly": settings.routeOnly
                 }
             },
-            {
-                "tag": "http-test-in",
-                "port": 10809,
-                "listen": "127.17.1.3",
-                "protocol": "http",
-                "settings": {
-                    "allowTransparent": false
-                }
-            }
         ],
         outbounds: [
             outbound, 
@@ -504,7 +495,6 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     "type": "field",
                     "inboundTag": [
                         "socks-test-in",
-                        "http-test-in",
                     ],
                     "port": 53,
                     "outboundTag": dnsOutboundTag
@@ -528,7 +518,6 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     "type": "field",
                     "inboundTag": [
                         "socks-test-in",
-                        "http-test-in",
                     ],
                     "network": "tcp,udp",
                     "outboundTag": "proxy"

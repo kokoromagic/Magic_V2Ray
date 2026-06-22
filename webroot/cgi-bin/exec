@@ -12,23 +12,40 @@ if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
 fi
 
 SECRET_TOKEN="__SECRET_TOKEN__"
+DATADIR="/data/adb/magic_v2ray"
+AUTHPROP="$DATADIR/auth.prop"
 
-REQ_TOKEN=$(echo "$QUERY_STRING" | sed -n 's/^.*token=\([^&]*\).*$/\1/p')
-
-if [ -z "$REQ_TOKEN" ]; then
-    REQ_TOKEN=$(echo "$QUERY_STRING" | grep -oE 'token=[^&]+' | cut -d= -f2)
-fi
-
-if [ "$REQ_TOKEN" != "$SECRET_TOKEN" ]; then
-    echo "Error: Unauthorized (Invalid Token)"
-    exit 1
-fi
+grep_prop() {
+    local REGEX="s/^$1=//p"
+    shift
+    local FILES=$@
+    [ -z "$FILES" ] && FILES="$DATADIR/auth.prop"
+    cat $FILES 2>/dev/null | dos2unix | sed -n "$REGEX" | head -n 1
+}
 
 urldecode() {
     # urldecode <string>
     local url_encoded="${1//+/ }"
     printf '%b' "${url_encoded//%/\\x}"
 }
+
+VALID_USER=$(grep_prop username)
+VALID_PASS=$(grep_prop password) 
+[ -z "$VALID_USER" ] && VALID_USER="admin"
+[ -z "$VALID_PASS" ] && VALID_PASS=SECRET_TOKEN
+EXPECTED_AUTH=$(echo -n "$VALID_USER:$VALID_PASS" | base64)
+
+REQ_TOKEN=$(echo "$QUERY_STRING" | sed -n 's/^.*token=\([^&]*\).*$/\1/p')
+REQ_TOKEN=$(urldecode "$REQ_TOKEN")
+
+if [ -z "$REQ_TOKEN" ]; then
+    REQ_TOKEN=$(echo "$QUERY_STRING" | grep -oE 'token=[^&]+' | cut -d= -f2)
+fi
+
+if [ "$REQ_TOKEN" != "$SECRET_TOKEN" ] && [ "$REQ_TOKEN" != "$EXPECTED_AUTH" ]; then
+    echo "Error: Unauthorized (Invalid Token)"
+    exit 1
+fi
 
 if [ "$REQUEST_METHOD" = "POST" ] && [ "$CONTENT_LENGTH" -gt 0 ]; then
     POST_DATA=$(dd bs=1 count=$CONTENT_LENGTH 2>/dev/null)
