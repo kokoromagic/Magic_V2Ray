@@ -139,11 +139,13 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         }
         else if (uri.startsWith('vless://') || uri.startsWith('trojan://')) {
             const proto = uri.startsWith('vless://') ? 'vless' : 'trojan';
-            const u = new URL(uri);
+            // Fix parser on old Chrome
+            const fakeHttpUri = uri.replace(/^(vless|trojan):\/\//i, 'https://');
+            const u = new URL(fakeHttpUri);
             const p = new URLSearchParams(u.search);
             const user = decodeURIComponent(u.username);
             const host = u.hostname;
-            const port = +u.port;
+            const port = +u.port || 443;
             const net = p.get('type') || 'tcp';
             const sec = p.get('security') || 'none';
 

@@ -794,7 +794,9 @@ function getFullNodeDetails(node) {
         } catch (e) { console.error("Error parsing vmess json", e); }
     } else {
         try {
-            const u = new URL(uri);
+            // Fix parser on old Chrome
+            const fakeHttpUri = uri.replace(/^(vless|trojan):\/\//i, 'https://');
+            const u = new URL(fakeHttpUri);
             const p = new URLSearchParams(u.search);
             d.uuid = decodeURIComponent(u.username);
             d.address = u.hostname;
