@@ -1063,3 +1063,54 @@ select option:active {
     .control-actions .btn { padding: 10px 12px; font-size: 12.5px; }
     .tab-btn { padding: 12px 14px; font-size: 13px; }
 }
+
+/* ===== Login Overlay Styles ===== */
+#login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(6px);
+    display: none; 
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.login-window {
+    max-width: 360px;
+    width: 100%;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.login-header {
+    margin-bottom: 24px;
+    justify-content: center;
+}
+
+.login-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--md-on-surface);
+}
+
+#login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.login-submit-btn {
+    margin-top: 8px;
+    padding: 12px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-weight: 600;
+    text-align: center;
+    border: none;
+    width: 100%;
+}

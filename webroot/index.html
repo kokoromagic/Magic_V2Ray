@@ -537,5 +537,25 @@
         </div>
     </div>
 
+    <div id="login-overlay" class="modal-overlay">
+    <div class="modal-window login-window">
+        <header class="modal-header login-header">
+            <h2 data-i18n="login_title">Sign in to Magic V2Ray</h2>
+        </header>
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="edit-item-field">
+                <label data-i18n="lbl_username">Username</label>
+                <input type="text" id="login-username" required autocomplete="username">
+            </div>
+            <div class="edit-item-field">
+                <label data-i18n="lbl_password">Password</label>
+                <input type="password" id="login-password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="tab-btn active login-submit-btn" data-i18n="btn_login">
+                Sign In
+            </button>
+        </form>
+    </div>
+</div>
 </body>
 </html>

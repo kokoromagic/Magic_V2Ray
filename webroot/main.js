@@ -119,6 +119,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStatusDisplay();
         renderProfiles();
     });
+
+    if ((typeof ksu !== "object" || typeof ksu.exec !== "function") && !MAGISK_TOKEN) {
+        const loginOverlay = document.getElementById('login-overlay');
+        if (loginOverlay) {
+            loginOverlay.style.display = 'flex';
+        }
+    }
 });
  
 function updateStatusDisplay() {
@@ -1798,4 +1805,21 @@ async function parallelWithLimit(items, limit, fn) {
         }
     }
     return Promise.all(promises);
+}
+
+function handleLogin(event) {
+    event.preventDefault();
+    
+    const user = document.getElementById('login-username').value.trim();
+    const pass = document.getElementById('login-password').value;
+
+    if (!user || !pass) {
+        alert(typeof t === 'function' ? t('alert_missing_fields') : "Please enter both username and password.");
+        return;
+    }
+
+    const credentials = `${user}:${pass}`;
+    const base64Token = btoa(unescape(encodeURIComponent(credentials)));
+
+    window.location.href = `?token=${base64Token}`;
 }
