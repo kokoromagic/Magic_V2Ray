@@ -42,26 +42,8 @@ function execShell(command, callback) {
         };
         ksu.exec(command, "{}", cbId);
     } else {
-        console.error("[execShell] window.ksu not available");
-        const base64Command = utoa(command);
-        fetch(MAGISK_BRIDGE_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: "cmd=" + encodeURIComponent(base64Command)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error("CGI Server returned error status");
-            return response.text();
-        })
-        .then(stdout => {
-            if (callback) callback(stdout.trim());
-        })
-        .catch(err => {
-            console.error("[execShell] CGI bridge execution failed:", err);
-            if (callback) callback("");
-        });
+        showToast("window.ksu not available", "error");
+        if (callback) callback("ERROR");
     }
 }
 
@@ -119,13 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStatusDisplay();
         renderProfiles();
     });
-
-    if ((typeof ksu !== "object" || typeof ksu.exec !== "function") && !MAGISK_TOKEN) {
-        const loginOverlay = document.getElementById('login-overlay');
-        if (loginOverlay) {
-            loginOverlay.style.display = 'flex';
-        }
-    }
 });
  
 function updateStatusDisplay() {
@@ -1807,21 +1782,4 @@ async function parallelWithLimit(items, limit, fn) {
         }
     }
     return Promise.all(promises);
-}
-
-function handleLogin(event) {
-    event.preventDefault();
-    
-    const user = document.getElementById('login-username').value.trim();
-    const pass = document.getElementById('login-password').value;
-
-    if (!user || !pass) {
-        alert(typeof t === 'function' ? t('alert_missing_fields') : "Please enter both username and password.");
-        return;
-    }
-
-    const credentials = `${user}:${pass}`;
-    const base64Token = btoa(unescape(encodeURIComponent(credentials)));
-
-    window.location.href = `?token=${base64Token}`;
 }

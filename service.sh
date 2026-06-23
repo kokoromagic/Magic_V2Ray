@@ -216,32 +216,6 @@ do_job() {
     if [ "$content" = "wait" ]; then
         : # Do nothing
     fi
-    if [ "$content" = "start_httpd" ]; then
-        httpd -p 127.17.1.3:80 -h "$MODDIR/webroot"
-        $iptables -t filter -N HTTPD_AUTH
-        $iptables -t filter -F HTTPD_AUTH
-        BROWSERS=$(grep_prop browser "$DATADIR/auth.prop")
-        local IFS=','
-        for pkg in $BROWSERS; do
-            if [ -d "/data/data/$pkg" ]; then
-                BG_UID=$(stat -c '%u' "/data/data/$pkg")
-                if [ ! -z "$BG_UID" ] && [ $BG_UID -ge 10000 ]; then
-                    echo "Accept $pkg with UID $BG_UID"
-                    $iptables -A HTTPD_AUTH -m owner --uid-owner "$BG_UID" -p tcp --dport 80 -d 127.17.1.3 -j ACCEPT
-                fi
-            fi
-        done
-        unset IFS
-        # Ensure no fucking apps can access it
-        $iptables -A HTTPD_AUTH -m owner --uid-owner 10000-2147483647 -p tcp --dport 80 -d 127.17.1.3 -j REJECT --reject-with tcp-reset
-        $iptables -I OUTPUT -p tcp --dport 80 -d 127.17.1.3 -j HTTPD_AUTH
-    fi
-    if [ "$content" = "stop_httpd" ]; then
-        pkill -f "httpd -p 127.17.1.3:80"
-        $iptables -D OUTPUT -p tcp --dport 80 -d 127.17.1.3 -j HTTPD_AUTH
-        $iptables -t filter -F HTTPD_AUTH
-        $iptables -t filter -X HTTPD_AUTH
-    fi
     if [ "$content" = "start" ]; then
         STAT_XRAY_EXE=$(stat -L -c "%D:%i" "/proc/$XRAY_PID/exe")
         STAT_XRAY_BIN=$(stat -L -c "%D:%i" "$MODDIR/bin/xray")
@@ -405,8 +379,5 @@ if [ -e "$DATADIR/config.json" ]; then
     echo "start" > "$PIPE_FILE"
     echo "wait" > "$PIPE_FILE"
 fi
-
-# Start webserver on boot
-do_job "start_httpd"
 
 } &

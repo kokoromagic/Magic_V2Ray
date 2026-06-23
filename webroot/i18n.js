@@ -158,13 +158,6 @@ const i18n = {
         lbl_sub_url: "Subscription URL",
         lbl_sub_dedup: "Deduplicate configurations when fetching",
         toast_dedup_done: "Removed {removed} duplicate(s). {total} node(s) remaining.",
-
-        // Login
-        login_title: "Sign in to Magic V2Ray",
-        lbl_username: "Username",
-        lbl_password: "Password",
-        btn_login: "Sign In",
-        alert_missing_fields: "Please enter both username and password.",
     },
     vi: {
         tab_dashboard: "Bảng Điều Khiển",
@@ -325,12 +318,5 @@ const i18n = {
         lbl_sub_url: "URL đăng ký",
         lbl_sub_dedup: "Loại trùng khi tải về",
         toast_dedup_done: "Đã xóa {removed} bản trùng. Còn lại {total} nút.",
-
-        // Login
-        login_title: "Đăng nhập Magic V2Ray",
-        lbl_username: "Tên đăng nhập",
-        lbl_password: "Mật khẩu",
-        btn_login: "Đăng nhập",
-        alert_missing_fields: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu."
     }
 };
