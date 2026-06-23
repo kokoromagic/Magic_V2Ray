@@ -436,7 +436,8 @@ function parseProxyUri(uri) {
         // WireGuard: wireguard://secretKey@host:port?publickey=...&...#name
         if (protocol === 'wireguard' || protocol === 'wg') {
             try {
-                const u = new URL(uri.replace(/^wg:\/\//, 'wireguard://'));
+                const fixedUri = uri.replace(/^(wg|wireguard):\/\//i, 'https://');
+                const u = new URL(fixedUri);
                 const p = new URLSearchParams(u.search);
                 const name = u.hash ? decodeURIComponent(u.hash.substring(1)) : "WireGuard";
                 return {
@@ -444,7 +445,7 @@ function parseProxyUri(uri) {
                     name,
                     protocol: 'wireguard',
                     address: u.hostname,
-                    port: u.port || "51820",
+                    port: u.port || "443",
                     uuid: u.username ? decodeURIComponent(u.username) : "",
                     security: "none",
                     rawUri: uri
@@ -455,7 +456,7 @@ function parseProxyUri(uri) {
         // Hysteria2: hysteria2://password@host:port?...#name
         if (protocol === 'hysteria2' || protocol === 'hy2') {
             try {
-                const fixedUri = uri.replace(/^hy2:\/\//, 'hysteria2://');
+                const fixedUri = uri.replace(/^(hy2|hysteria2):\/\//i, 'https://');
                 const u = new URL(fixedUri);
                 const name = u.hash ? decodeURIComponent(u.hash.substring(1)) : "Hysteria2";
                 return {
@@ -474,14 +475,15 @@ function parseProxyUri(uri) {
         // SOCKS / SOCKS5: socks5://user:pass@host:port#name
         if (protocol === 'socks' || protocol === 'socks5') {
             try {
-                const u = new URL(uri);
+                const fixedUri = uri.replace(/^(socks5|socks):\/\//i, 'https://');
+                const u = new URL(fixedUri);
                 const name = u.hash ? decodeURIComponent(u.hash.substring(1)) : "SOCKS";
                 return {
                     id: Math.random().toString(36).substr(2, 9),
                     name,
                     protocol: 'socks',
                     address: u.hostname,
-                    port: u.port || "1080",
+                    port: u.port || "443",
                     uuid: u.username ? decodeURIComponent(u.username) : "",
                     security: "none",
                     rawUri: uri
@@ -802,7 +804,7 @@ function getFullNodeDetails(node) {
     } else {
         try {
             // Fix parser on old Chrome
-            const fakeHttpUri = uri.replace(/^(vless|trojan):\/\//i, 'https://');
+            const fakeHttpUri = uri.replace(/^(vless|trojan|wg|wireguard|hy2|hysteria2|socks5|socks):\/\//i, 'https://');
             const u = new URL(fakeHttpUri);
             const p = new URLSearchParams(u.search);
             d.uuid = decodeURIComponent(u.username);

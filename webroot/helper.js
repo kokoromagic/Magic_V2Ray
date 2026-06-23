@@ -242,7 +242,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 const decodedUserInfo = decodeBase64(matchB64[1]);
                 plainUri = 'ss://' + decodedUserInfo + uri.substring(uri.indexOf('@'));
             }
-            const u = new URL(plainUri.replace(/^shadowsocks:\/\//, 'ss://'));
+            const fakeHttpUri = plainUri.replace(/^(ss|shadowsocks):\/\//i, 'https://');
+            const u = new URL(fakeHttpUri);
             const userInfo = decodeURIComponent(u.username + (u.password ? ':' + u.password : ''));
             const [method, password] = userInfo.split(':');
 
@@ -252,7 +253,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 settings: {
                     servers: [{
                         address: u.hostname,
-                        port: +u.port,
+                        port: +u.port || 443,
                         method: method,
                         password: password || ""
                     }]
@@ -264,7 +265,9 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             };
         }
         else if (uri.startsWith('wg://') || uri.startsWith('wireguard://')) {
-            const u = new URL(uri.replace(/^wg:\/\//, 'wireguard://'));
+            // Fix parser on old Chrome
+            const fakeHttpUri = uri.replace(/^(wg|wireguard):\/\//i, 'https://');
+            const u = new URL(fakeHttpUri);
             const p = new URLSearchParams(u.search);
             
             outbound = {
@@ -273,7 +276,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 settings: {
                     secretKey: decodeURIComponent(u.username + (u.password ? ':' + u.password : '')),
                     peers: [{
-                        endpoint: `${u.hostname}:${u.port}`,
+                        endpoint: `${u.hostname}:${u.port || 443}`,
                         publicKey: p.get('public_key') || p.get('pk') || ""
                     }],
                     mtu: parseInt(p.get('mtu')) || settings.mtu || 1420,
@@ -292,13 +295,19 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             }
         }
         else if (uri.startsWith('hy2://') || uri.startsWith('hysteria2://')) {
-            const u = new URL(uri.replace(/^hy2:\/\//, 'hysteria2://'));
+            // Fix parser on old Chrome
+            const fakeHttpUri = uri.replace(/^(hy2|hysteria2):\/\//i, 'https://');
+            const u = new URL(fakeHttpUri);
             const p = new URLSearchParams(u.search);
             
             outbound = {
                 tag: "proxy",
                 protocol: "hysteria2",
                 settings: {
+                    servers: [{
+                        address: u.hostname,
+                        port: +u.port || 443
+                    }],
                     auth: decodeURIComponent(u.username)
                 },
                 streamSettings: {
@@ -318,7 +327,9 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             }
         }
         else if (uri.startsWith('socks://') || uri.startsWith('socks5://')) {
-            const u = new URL(uri.replace(/^socks5:\/\//, 'socks://'));
+            // Fix parser on old Chrome
+            const fakeHttpUri = uri.replace(/^(socks5|socks):\/\//i, 'https://');
+            const u = new URL(fakeHttpUri);
             
             outbound = {
                 tag: "proxy",
@@ -326,7 +337,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 settings: {
                     servers: [{
                         address: u.hostname,
-                        port: +u.port,
+                        port: +u.port || 443,
                         users: u.username ? [{
                             user: decodeURIComponent(u.username),
                             pass: decodeURIComponent(u.password || "")
