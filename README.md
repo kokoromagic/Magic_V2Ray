@@ -48,6 +48,9 @@ If your device is not rooted, or if you are looking for a regular GUI applicatio
 - **One-Click Auto-Reload:** Saves your subscription links so you can update an entire category with a single tap.
 - **No Battery Drain:** Native background processing ensures your battery lasts much longer compared to running heavy standalone VPN apps.
 
+
+**Note:** Magisk users need to install [KsuWebUIStandalone](https://github.com/5ec1cff/KsuWebUIStandalone/releases/tag/v1.0) to open WebUI of the module
+
 ---
 
 ## Acknowledgments & Credits
