@@ -113,6 +113,10 @@ const i18n = {
         toast_no_active_config: "Please select a config before starting engine!",
         toast_network_unreachable: "Network is unreachable or routing mark is blocked!",
         toast_pinging: "Testing latency for ",
+        toast_check_http: "Checking HTTP latency for ",
+        toast_check_ip: "Checking IP for ",
+        menu_check_http: "Check HTTP",
+        menu_check_ip: "Check IP",
 
         // Import dropdown
         import_from_clipboard: "Import from Clipboard",
@@ -273,6 +277,10 @@ const i18n = {
         toast_no_active_config: "Vui lòng chọn một cấu hình trước để kết nối!",
         toast_network_unreachable: "Mạng hiện tại không khả dụng hoặc cấu hình định tuyến bị chặn!",
         toast_pinging: "Đang kiểm tra kết nối cho ",
+        toast_check_http: "Đang đo độ trễ HTTP cho ",
+        toast_check_ip: "Đang kiểm tra IP cho ",
+        menu_check_http: "Check HTTP",
+        menu_check_ip: "Check IP",
 
         // Import dropdown
         import_from_clipboard: "Nhập từ Clipboard",
