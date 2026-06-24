@@ -19,12 +19,10 @@ grep_prop() {
 
 rm -rf "$DATADIR/xray.log"
 rm -rf "$DATADIR/tun2socks.log"
-XRAY_LOG=/dev/null
-TUN2SOCKS_LOG=/dev/null
+XRAY_LOG="$DATADIR/xray.log"
+TUN2SOCKS_LOG="$DATADIR/tun2socks.log"
 if [ "$(grep_prop debug)" = "1" ]; then
     set -x
-    XRAY_LOG="$DATADIR/xray.log"
-    TUN2SOCKS_LOG="$DATADIR/tun2socks.log"
 fi
 exec > "$DATADIR/service.log" 2>&1
 
