@@ -41,9 +41,10 @@
                     <div class="import-add-menu-container">
                         <button class="btn btn-add-node" onclick="toggleImportAddMenu(event)" title="More import options">+</button>
                         <div id="import-add-dropdown" class="import-add-dropdown">
+                            <!-- Hide these button for now as it's not working on KSU Webui currently
                             <button onclick="importFromClipboard(); closeImportAddMenu();" data-i18n="import_from_clipboard">Import from Clipboard</button>
                             <button onclick="importFromFile(); closeImportAddMenu();" data-i18n="import_from_file">Import from File</button>
-                            <div class="import-add-divider"></div>
+                            <div class="import-add-divider"></div>-->
                             <button onclick="openNewNodeModal('vmess'); closeImportAddMenu();" data-i18n="add_vmess">Add VMess</button>
                             <button onclick="openNewNodeModal('vless'); closeImportAddMenu();" data-i18n="add_vless">Add VLESS</button>
                             <button onclick="openNewNodeModal('trojan'); closeImportAddMenu();" data-i18n="add_trojan">Add Trojan</button>
