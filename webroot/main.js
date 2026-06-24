@@ -1514,6 +1514,12 @@ function switchTab(tabId) {
     
     document.getElementById(tabId).classList.add('active');
     event.currentTarget.classList.add('active');
+
+    if (tabId === 'tab-log') {
+        startLogAutoRefresh();
+    } else {
+        stopLogAutoRefresh();
+    }
 }
 
 function toggleSubSettingField(triggerId, subPanelId) {
@@ -1838,4 +1844,197 @@ async function parallelWithLimit(items, limit, fn) {
         }
     }
     return Promise.all(promises);
+}
+
+function _logClassifyLine(text) {
+    const t = text.toLowerCase();
+    if (/\berror\b/.test(t))   return 'error';
+    if (/\bwarning\b/.test(t)) return 'warning';
+    if (/\bdebug\b/.test(t))   return 'debug';
+    // Xray access log: looks like "2024/01/01 00:00:00 accepted tcp:..."
+    if (/accepted|rejected/.test(t)) return 'access';
+    return 'info';
+}
+
+function _logRenderLines() {
+    const output = document.getElementById('log-output');
+    const emptyState = document.getElementById('log-empty-state');
+    if (!output) return;
+
+    if (_logAllLines.length === 0) {
+        emptyState && (emptyState.style.display = '');
+        // clear existing line nodes
+        output.querySelectorAll('.log-line').forEach(el => el.remove());
+        document.getElementById('log-line-count').textContent = '— lines';
+        return;
+    }
+
+    emptyState && (emptyState.style.display = 'none');
+
+    // Diff: only append new lines (avoid full re-render flicker)
+    const existingCount = output.querySelectorAll('.log-line').length;
+    const newLines = _logAllLines.slice(existingCount);
+
+    newLines.forEach((text, i) => {
+        const lineNum = existingCount + i + 1;
+        const level = _logClassifyLine(text);
+        const div = document.createElement('div');
+        div.className = `log-line log-line--${level}${level === 'access' ? ' log-line--access' : ''}`;
+        div.dataset.level = level;
+
+        // apply current filter
+        if (_logCurrentFilter !== 'all' && _logCurrentFilter !== level) {
+            div.classList.add('log-hidden');
+        }
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'log-line-num';
+        numSpan.textContent = lineNum;
+
+        const txtSpan = document.createElement('span');
+        txtSpan.className = 'log-line-text';
+        txtSpan.textContent = text;
+
+        div.appendChild(numSpan);
+        div.appendChild(txtSpan);
+        output.appendChild(div);
+    });
+
+    // Update line count
+    const visibleCount = output.querySelectorAll('.log-line:not(.log-hidden)').length;
+    document.getElementById('log-line-count').textContent =
+        `${_logAllLines.length} lines${_logCurrentFilter !== 'all' ? ` (${visibleCount} shown)` : ''}`;
+
+    // Auto-scroll to bottom if tail mode is on
+    if (_logTailEnabled) {
+        output.scrollTop = output.scrollHeight;
+    }
+}
+
+function refreshLog() {
+    const tailLines = document.getElementById('log-tail-lines')?.value || 200;
+    const btn = document.getElementById('btn-log-refresh');
+    btn && btn.querySelector('svg') && btn.classList.add('spinning');
+
+    const dot = document.getElementById('log-status-dot');
+
+    execShell(
+        `tail -n ${tailLines} '${DATADIR}/xray.log' 2>/dev/null || echo ''`,
+        (output) => {
+            btn && btn.classList.remove('spinning');
+
+            if (!output || !output.trim()) {
+                _logAllLines = [];
+                _logRenderLines();
+                dot && dot.classList.remove('live');
+                return;
+            }
+
+            const newLines = output.split('\n').filter(l => l.length > 0);
+
+            // If line count changed, do a full replace (e.g. log rotated or tail shrunk)
+            if (newLines.length < _logAllLines.length) {
+                // Log was cleared/rotated — full re-render
+                document.getElementById('log-output')?.querySelectorAll('.log-line')
+                    .forEach(el => el.remove());
+                _logAllLines = [];
+            }
+
+            _logAllLines = newLines;
+            _logRenderLines();
+            dot && dot.classList.add('live');
+        }
+    );
+}
+
+function startLogAutoRefresh() {
+    stopLogAutoRefresh();
+    refreshLog();
+    const isEnabled = document.getElementById('log-autorefresh-toggle')?.checked ?? false;
+    if (!isEnabled) return;
+    const interval = parseInt(document.getElementById('log-autorefresh-interval')?.value || 5000);
+    _logAutoRefreshTimer = setInterval(refreshLog, interval);
+}
+
+function stopLogAutoRefresh() {
+    if (_logAutoRefreshTimer) {
+        clearInterval(_logAutoRefreshTimer);
+        _logAutoRefreshTimer = null;
+    }
+    const dot = document.getElementById('log-status-dot');
+    dot && dot.classList.remove('live');
+}
+
+function toggleLogAutoRefresh() {
+    const isEnabled = document.getElementById('log-autorefresh-toggle')?.checked;
+    if (isEnabled) {
+        startLogAutoRefresh();
+    } else {
+        stopLogAutoRefresh();
+    }
+}
+
+function updateLogRefreshInterval() {
+    const isEnabled = document.getElementById('log-autorefresh-toggle')?.checked;
+    if (isEnabled) startLogAutoRefresh();
+}
+
+function toggleLogTail() {
+    _logTailEnabled = !_logTailEnabled;
+    const btn = document.getElementById('btn-log-tail');
+    if (btn) {
+        btn.dataset.active = _logTailEnabled ? 'true' : 'false';
+        btn.title = _logTailEnabled ? 'Auto-scroll ON' : 'Auto-scroll OFF';
+    }
+    if (_logTailEnabled) {
+        const output = document.getElementById('log-output');
+        output && (output.scrollTop = output.scrollHeight);
+    }
+}
+
+function setLogFilter(level) {
+    _logCurrentFilter = level;
+
+    // Update chip active state
+    document.querySelectorAll('.log-filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.level === level);
+    });
+
+    // Show/hide lines
+    document.querySelectorAll('#log-output .log-line').forEach(line => {
+        const lineLevel = line.dataset.level;
+        if (level === 'all' || lineLevel === level) {
+            line.classList.remove('log-hidden');
+        } else {
+            line.classList.add('log-hidden');
+        }
+    });
+
+    // Update count
+    const total = _logAllLines.length;
+    const visible = document.querySelectorAll('#log-output .log-line:not(.log-hidden)').length;
+    const countEl = document.getElementById('log-line-count');
+    if (countEl) {
+        countEl.textContent = `${total} lines${level !== 'all' ? ` (${visible} shown)` : ''}`;
+    }
+}
+
+function clearLogView() {
+    _logAllLines = [];
+    document.getElementById('log-output')?.querySelectorAll('.log-line')
+        .forEach(el => el.remove());
+    const emptyState = document.getElementById('log-empty-state');
+    emptyState && (emptyState.style.display = '');
+    document.getElementById('log-line-count').textContent = '— lines';
+    showToast(t('toast_log_cleared'), 'info');
+}
+
+function copyLogToClipboard() {
+    const text = _logAllLines.join('\n');
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast(t('toast_log_copied'), 'success');
+    }).catch(() => {
+        showToast(t('toast_log_copy_fail'), 'error');
+    });
 }

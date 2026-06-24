@@ -32,3 +32,10 @@ let currentEditingCategory = null;
 let currentEditingNodeId = null;
 let currentEditingProtocol = null;
 let categoryExpandedState = {};
+
+// Logging
+let _logAutoRefreshTimer = null;
+let _logTailEnabled = true;
+let _logCurrentFilter = 'all';
+let _logLastLineCount = 0;
+let _logAllLines = [];

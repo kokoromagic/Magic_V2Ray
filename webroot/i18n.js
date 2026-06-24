@@ -162,6 +162,16 @@ const i18n = {
         lbl_sub_url: "Subscription URL",
         lbl_sub_dedup: "Deduplicate configurations when fetching",
         toast_dedup_done: "Removed {removed} duplicate(s). {total} node(s) remaining.",
+
+        // Log tab
+        tab_log: "Xray Log",
+        log_filter_all: "All",
+        log_empty: "No log entries yet.<br>Start Xray engine to generate logs.",
+        log_autorefresh: "Auto-refresh",
+        log_tail_lines: "Tail:",
+        toast_log_copied: "Log copied to clipboard.",
+        toast_log_copy_fail: "Failed to copy log.",
+        toast_log_cleared: "Log view cleared.",
     },
     vi: {
         tab_dashboard: "Bảng Điều Khiển",
@@ -326,5 +336,15 @@ const i18n = {
         lbl_sub_url: "URL đăng ký",
         lbl_sub_dedup: "Loại trùng khi tải về",
         toast_dedup_done: "Đã xóa {removed} bản trùng. Còn lại {total} nút.",
+
+        // Log tab
+        tab_log: "Nhật Ký Xray",
+        log_filter_all: "Tất cả",
+        log_empty: "Chưa có dòng log nào.<br>Khởi động Xray để xem nhật ký.",
+        log_autorefresh: "Tự làm mới",
+        log_tail_lines: "Dòng cuối:",
+        toast_log_copied: "Đã sao chép log.",
+        toast_log_copy_fail: "Sao chép log thất bại.",
+        toast_log_cleared: "Đã xóa log khỏi màn hình.",
     }
 };
