@@ -1281,3 +1281,16 @@ select option:active {
     color: var(--md-on-surface-variant);
     margin-left: 4px;
 }
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #007aff; /* Hoặc màu chủ đạo của app bạn */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

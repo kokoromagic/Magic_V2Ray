@@ -600,7 +600,11 @@
             </div>
         </div>
     </div>
-    
-</div>
+    <div id="loading-overlay" class="modal-overlay" style="display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(3px);">
+        <div style="background: rgba(0, 0, 0, 0.85); padding: 24px 40px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 16px; border: 1px solid #333; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+            <div class="spinner"></div>
+            <div id="loading-text" style="color: #fff; font-size: 15px; font-weight: 500;" data-i18n="loading_please_wait">Please wait...</div>
+        </div>
+    </div>
 </body>
 </html>

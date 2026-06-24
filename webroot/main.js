@@ -32,6 +32,22 @@ function changeLanguage(lang) {
     renderProfiles();
     saveAdvancedSettingsForm(true); 
 }
+
+function showLoading(textKey) {
+    const overlay = document.getElementById('loading-overlay');
+    const textEl = document.getElementById('loading-text');
+    if (overlay && textEl) {
+        textEl.innerHTML = (typeof t === 'function' && i18n[currentLang]?.[textKey]) ? t(textKey) : textKey;
+        overlay.style.display = 'flex';
+    }
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
  
 function execShell(command, callback) {
     if (typeof ksu === "object" && typeof ksu.exec === "function") {
@@ -196,11 +212,14 @@ async function fetchSubscription(category, url, isReload = false) {
     const status = await execShellAsync(`sh ${MODDIR}/proxy_control.sh status`);
     const escapedUrl = url.replace(/'/g, "'\\''");
     const extraArgs = (status === 'running')? "--socks5-hostname 127.17.1.3:808" : "";
+    showLoading(`${t("toast_fetch_sub")}${category}...`);
     execShell(`curl ${extraArgs} -sLk --max-time 15 '${escapedUrl}'`, (res) => {
         if (!res || res.trim() === "") {
+            hideLoading();
             return showToast(t('toast_fetch_failed'), "error");
         }
         if (res.includes("Failed to connect") || res.includes("Could not resolve")) {
+            hideLoading();
             return showToast(t('toast_fetch_reason') + res.split('\n')[0], "error");
         }
 
@@ -219,6 +238,7 @@ async function fetchSubscription(category, url, isReload = false) {
 
         const xrayConfigs = extractUrisFromText(parsedContent);
         parseAndAppendNodes(category, xrayConfigs, url, isReload);
+        hideLoading();
     });
 }
  
@@ -1802,7 +1822,7 @@ async function pingCategoryCheckIp(category) {
 }
 
 async function checkHttpWithClose(event, category) {
-    showToast(`${t("toast_check_http")}${category}...`, "info");
+    showLoading(`${t("toast_check_http")}${category}...`);
     const btn = event.currentTarget;
     closeAllMenus();
     btn.disabled = true;
@@ -1811,11 +1831,12 @@ async function checkHttpWithClose(event, category) {
         await pingCategoryCheckHttp(category);
     } finally {
         btn.disabled = false;
+        hideLoading();
     }
 }
 
 async function checkIpWithClose(event, category) {
-    showToast(`${t("toast_check_ip")}${category}...`, "info");
+    showLoading(`${t("toast_check_ip")}${category}...`);
     const btn = event.currentTarget;
     closeAllMenus();
     btn.disabled = true;
@@ -1824,6 +1845,7 @@ async function checkIpWithClose(event, category) {
         await pingCategoryCheckIp(category);
     } finally {
         btn.disabled = false;
+        hideLoading();
     }
 }
 

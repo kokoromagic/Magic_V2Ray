@@ -117,6 +117,7 @@ const i18n = {
         toast_check_ip: "Checking IP for ",
         menu_check_http: "Check HTTP",
         menu_check_ip: "Check IP",
+        toast_fetch_sub: "Fetching subscription for ",
 
         // Import dropdown
         import_from_clipboard: "Import from Clipboard",
@@ -291,6 +292,7 @@ const i18n = {
         toast_check_ip: "Đang kiểm tra IP cho ",
         menu_check_http: "Check HTTP",
         menu_check_ip: "Check IP",
+        toast_fetch_sub: "Đang lấy cấu hình cho ",
 
         // Import dropdown
         import_from_clipboard: "Nhập từ Clipboard",
