@@ -236,24 +236,42 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             }
         }
         else if (uri.startsWith('ss://') || uri.startsWith('shadowsocks://')) {
-            let plainUri = uri;
-            const matchB64 = uri.match(/^ss:\/\/([a-zA-Z0-9+/=_-]+)@/);
-            if (matchB64) {
-                const decodedUserInfo = decodeBase64(matchB64[1]);
-                plainUri = 'ss://' + decodedUserInfo + uri.substring(uri.indexOf('@'));
+            // Extract user info portion (before the @)
+            const atIdx = uri.indexOf('@');
+            if (atIdx === -1) throw new Error("Invalid Shadowsocks URI: missing @");
+            const schemeEnd = uri.indexOf('://') + 3;
+            const rawUserPart = uri.substring(schemeEnd, atIdx);
+            // Try base64-decode first; fall back to plain text
+            let method, password;
+            try {
+                const decoded = decodeBase64(rawUserPart);
+                if (decoded && decoded.includes(':')) {
+                    const ci = decoded.indexOf(':');
+                    method = decoded.substring(0, ci);
+                    password = decoded.substring(ci + 1);
+                } else {
+                    throw new Error("not base64 method:pass");
+                }
+            } catch {
+                // Plain-text method:password (URL-encoded)
+                const plain = decodeURIComponent(rawUserPart);
+                const ci = plain.indexOf(':');
+                method = ci !== -1 ? plain.substring(0, ci) : plain;
+                password = ci !== -1 ? plain.substring(ci + 1) : "";
             }
-            const fakeHttpUri = plainUri.replace(/^(ss|shadowsocks):\/\//i, 'https://');
-            const u = new URL(fakeHttpUri);
-            const userInfo = decodeURIComponent(u.username + (u.password ? ':' + u.password : ''));
-            const [method, password] = userInfo.split(':');
+            // Parse host:port from after-@ portion (strip fragment/query)
+            let hostPort = uri.substring(atIdx + 1).replace(/#.*$/, '').replace(/\?.*$/, '');
+            const lastColon = hostPort.lastIndexOf(':');
+            const ssHost = hostPort.substring(0, lastColon);
+            const ssPort = parseInt(hostPort.substring(lastColon + 1)) || 443;
 
             outbound = {
                 tag: "proxy",
                 protocol: "shadowsocks",
                 settings: {
                     servers: [{
-                        address: u.hostname,
-                        port: +u.port || 443,
+                        address: ssHost,
+                        port: ssPort,
                         method: method,
                         password: password || ""
                     }]
@@ -277,7 +295,10 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     secretKey: decodeURIComponent(u.username + (u.password ? ':' + u.password : '')),
                     peers: [{
                         endpoint: `${u.hostname}:${u.port || 443}`,
-                        publicKey: p.get('public_key') || p.get('pk') || ""
+                        publicKey: p.get('publickey') || p.get('public_key') || p.get('pk') || "",
+                        ...(p.get('presharedkey') || p.get('preshared_key') ? {
+                            preSharedKey: p.get('presharedkey') || p.get('preshared_key')
+                        } : {})
                     }],
                     mtu: parseInt(p.get('mtu')) || settings.mtu || 1420,
                     address: p.get('address') ? p.get('address').split(',') : ["10.0.0.2/32"]
@@ -299,17 +320,36 @@ function convert_uri_to_xray_json(uri, optional_settings) {
             const fakeHttpUri = uri.replace(/^(hy2|hysteria2):\/\//i, 'https://');
             const u = new URL(fakeHttpUri);
             const p = new URLSearchParams(u.search);
-            
+
+            const hy2Server = {
+                address: u.hostname,
+                port: +u.port || 443
+            };
+            // Port hopping: mport param (e.g. "20000-30000")
+            if (p.get('mport')) {
+                hy2Server.ports = p.get('mport');
+            }
+
+            const hy2Settings = {
+                servers: [hy2Server],
+                auth: decodeURIComponent(u.username)
+            };
+            // hopInterval (seconds) for port hopping
+            if (p.get('hopInterval')) {
+                hy2Settings.hopInterval = parseInt(p.get('hopInterval')) || 30;
+            }
+            // Bandwidth hints
+            if (p.get('down') || p.get('bandwidth')) {
+                hy2Settings.downlinkCapacity = p.get('down') || p.get('bandwidth');
+            }
+            if (p.get('up')) {
+                hy2Settings.uplinkCapacity = p.get('up');
+            }
+
             outbound = {
                 tag: "proxy",
                 protocol: "hysteria2",
-                settings: {
-                    servers: [{
-                        address: u.hostname,
-                        port: +u.port || 443
-                    }],
-                    auth: decodeURIComponent(u.username)
-                },
+                settings: hy2Settings,
                 streamSettings: {
                     network: "udp",
                     security: "tls",
@@ -320,7 +360,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 }
             };
             if (p.get('obfs') && p.get('obfs') !== 'none') {
-                outbound.streamSettings.tlsSettings.obfs = {
+                outbound.settings.obfs = {
                     type: p.get('obfs'),
                     password: p.get('obfs-password') || ""
                 };

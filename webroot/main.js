@@ -853,7 +853,30 @@ function getFullNodeDetails(node) {
 
     // Shadowsocks
     if (protocol === 'shadowsocks') {
-        d.ssMethod = node.security || "aes-256-gcm";
+        // Parse method directly from the URI (base64 or plain-text userinfo)
+        try {
+            const atIdx = uri.indexOf('@');
+            if (atIdx !== -1) {
+                const schemeEnd = uri.indexOf('://') + 3;
+                const rawUser = uri.substring(schemeEnd, atIdx);
+                let method = null;
+                // Try base64 decode first
+                try {
+                    const decoded = decodeBase64(rawUser);
+                    if (decoded && decoded.includes(':')) {
+                        method = decoded.substring(0, decoded.indexOf(':'));
+                    }
+                } catch(e) {}
+                // Fallback: plain-text URL-encoded
+                if (!method) {
+                    const plain = decodeURIComponent(rawUser);
+                    if (plain.includes(':')) method = plain.substring(0, plain.indexOf(':'));
+                }
+                if (method) d.ssMethod = method;
+            }
+        } catch(e) {}
+        // Final fallback to stored node.security
+        if (!d.ssMethod) d.ssMethod = node.security || "aes-256-gcm";
         d.uuid = node.uuid || ""; // password
     }
 
@@ -883,6 +906,7 @@ function getFullNodeDetails(node) {
             d.hy2BandwidthDown = p.get('down') || p.get('bandwidth') || "";
             d.hy2BandwidthUp = p.get('up') || "";
             d.hy2PortHopping = p.get('mport') || "";
+            d.hy2HopInterval = p.get('hopInterval') || "";
         } catch(e) {}
     }
 
