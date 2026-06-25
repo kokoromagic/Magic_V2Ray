@@ -1207,15 +1207,14 @@ function _populateEditModal(node, isNew = false) {
     const isHysteria2 = (proto === 'hysteria2');
     const isShadowsocks = (proto === 'shadowsocks');
     const isClassic = (proto === 'vmess' || proto === 'vless' || proto === 'trojan');
-    const isClassicOrSS = isClassic || isShadowsocks;
 
     document.getElementById('field-group-encryption').style.display = (proto === 'vmess') ? 'flex' : 'none';
     document.getElementById('field-group-flow').style.display = (proto === 'vless') ? 'flex' : 'none';
     document.getElementById('field-group-alterid').style.display = (proto === 'vmess') ? 'flex' : 'none';
     document.getElementById('field-group-ss-method').style.display = isShadowsocks ? 'flex' : 'none';
 
-    // Transport section: only for vmess/vless/trojan/shadowsocks
-    document.getElementById('section-transport-wrapper').style.display = (isClassicOrSS) ? 'block' : 'none';
+    // Transport section: only for vmess/vless/trojan
+    document.getElementById('section-transport-wrapper').style.display = isClassic ? 'block' : 'none';
     // Security section: only for vmess/vless/trojan
     document.getElementById('section-security-wrapper').style.display = isClassic ? 'block' : 'none';
 
