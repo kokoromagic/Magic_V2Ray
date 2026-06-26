@@ -141,7 +141,7 @@ async function toggleService(action) {
             const [category, id] = activeConfig.split(':');
             const node = profiles[category]?.nodes?.find(n => n.id === id); 
             if (node) {
-                const xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
+                const xrayConfig = _resolveXrayConfig(node.rawUri);
                 execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
                     execShell(`sh ${MODDIR}/proxy_control.sh restart`, () => {
                         updateStatusDisplay();      
@@ -555,14 +555,28 @@ function parseProxyUri(uri) {
         return null;
     }
 }
- 
+
+function _resolveXrayConfig(rawUri) {
+    let config_json = {};
+    if (rawUri && rawUri.startsWith('chain://')) {
+        const fakeRawUri = rawUri.replace(/^chain:\/\//i, 'https://');
+        const u = new URL(fakeRawUri);
+        const hop1Uri = u.searchParams.get('hop1') || '';
+        const hop2Uri = u.searchParams.get('hop2') || '';
+        config_json = convert_chain_uris_to_xray_json(hop1Uri, hop2Uri, advSettings);
+    } else {
+        config_json = convert_uri_to_xray_json(rawUri, advSettings);
+    }
+    return config_json;
+}
+
 function selectNode(category, id) {
     const node = profiles[category]?.nodes?.find(n => n.id === id);
     if (!node) return;
  
     activeConfig = `${category}:${id}`;
     saveActiveConfig();
-    xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
+    xrayConfig = _resolveXrayConfig(node.rawUri);
  
     // dump xray config to file and restart service if running
     execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
@@ -620,12 +634,37 @@ function renderProfiles() {
         const listNode = group.querySelector('.nodes-list');
         profiles[category].nodes.forEach(node => {
             const isSelected = activeConfig === `${category}:${node.id}`;
+            const isChain = node.protocol === 'chain';
             const item = document.createElement('div');
             item.className = `config-item${isSelected ? ' selected' : ''}`;
+
+            // Chain nodes show hop labels instead of address:port
+            let metaLine;
+            if (isChain) {
+                try {
+                    const fakeRawUri = node.rawUri.replace(/^chain:\/\//i, 'https://');
+                    const u = new URL(fakeRawUri);
+                    const hop1Uri = u.searchParams.get('hop1') || '';
+                    const hop2Uri = u.searchParams.get('hop2') || '';
+                    const proto1 = hop1Uri.split('://')[0].toUpperCase();
+                    const proto2 = hop2Uri.split('://')[0].toUpperCase();
+                    metaLine = `⛓ CHAIN: ${proto1} → ${proto2}`;
+                } catch(e) {
+                    metaLine = '⛓ CHAIN';
+                }
+            } else {
+                metaLine = `${node.protocol.toUpperCase()} | ${escapeHtml(node.address)}:${escapeHtml(node.port)}`;
+            }
+
+            // Chain nodes open chain modal for editing; regular nodes open edit-node-modal
+            const editAction = isChain
+                ? `openProxyChainEditModal(event, '${escapeAttr(category)}', '${node.id}')`
+                : `openEditNodeModal(event, '${escapeAttr(category)}', '${node.id}')`;
+
             item.innerHTML = `
                 <div class="config-info" style="flex: 1; display: flex; flex-direction: column;">
                     <div class="config-name">${escapeHtml(node.name)}</div>
-                    <div class="config-meta">${node.protocol.toUpperCase()} | ${escapeHtml(node.address)}:${escapeHtml(node.port)}</div>
+                    <div class="config-meta">${metaLine}</div>
                 </div>
                 <div class="node-actions-container">
                     ${isSelected ? '<span>📌</span>' : ''}
@@ -633,7 +672,7 @@ function renderProfiles() {
                         <span id="ping-${category}-${node.id}" class="ping-info" style="text-align: right; white-space: nowrap;"></span>
                         <button class="btn-menu-trigger" onclick="toggleNodeMenu(event, this)" style="flex-shrink: 0;">⋮</button>
                         <div class="node-dropdown-menu">
-                            <button onclick="openEditNodeModal(event, '${escapeAttr(category)}', '${node.id}')">${t('menu_edit')}</button>
+                            <button onclick="${editAction}">${t('menu_edit')}</button>
                             <button class="btn-delete-item" onclick="deleteNode(event, '${escapeAttr(category)}', '${node.id}')">${t('menu_delete')}</button>
                         </div>
                     </div>
@@ -1389,7 +1428,7 @@ function saveEditedNode() {
     renderProfiles();
 
     if (!isNew && activeConfig === `${currentEditingCategory}:${currentEditingNodeId}`) {
-        const xrayConfig = convert_uri_to_xray_json(newUri, advSettings);
+        const xrayConfig = _resolveXrayConfig(newUri);
         execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
             execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
                 if (status === 'running') {
@@ -1492,6 +1531,162 @@ function toggleImportAddMenu(event) {
 function closeImportAddMenu() {
     const dropdown = document.getElementById('import-add-dropdown');
     if (dropdown) dropdown.classList.remove('show');
+}
+
+// Proxy Chain Modal
+
+function _getAllNodeOptions() {
+    const options = [];
+    Object.keys(profiles).forEach(category => {
+        const nodes = profiles[category]?.nodes;
+        if (!nodes || nodes.length === 0) return;
+        nodes.forEach(node => {
+            options.push({
+                value: `${category}:${node.id}`,
+                label: `[${category}] ${node.name || node.address} — ${(node.protocol || '').toUpperCase()}`
+            });
+        });
+    });
+    return options;
+}
+
+function _populateChainSelects() {
+    const opts = _getAllNodeOptions();
+    ['chain-hop1', 'chain-hop2'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">${t('chain_select_node')}</option>`;
+        opts.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.label;
+            sel.appendChild(opt);
+        });
+        if (prev) sel.value = prev;
+    });
+}
+
+function openProxyChainModal() {
+    _populateChainSelects();
+    document.getElementById('chain-name').value = '';
+    document.getElementById('chain-hop1').value = '';
+    document.getElementById('chain-hop2').value = '';
+    const modal = document.getElementById('proxy-chain-modal');
+    delete modal.dataset.editingId;
+    delete modal.dataset.editingCat;
+    applyI18n();
+    modal.style.display = 'block';
+}
+
+function closeProxyChainModal() {
+    const modal = document.getElementById('proxy-chain-modal');
+    modal.style.display = 'none';
+    delete modal.dataset.editingId;
+    delete modal.dataset.editingCat;
+}
+
+function saveProxyChain() {
+    const hop1Key = document.getElementById('chain-hop1').value;
+    const hop2Key = document.getElementById('chain-hop2').value;
+
+    if (!hop1Key || !hop2Key) {
+        showToast(t('toast_chain_select_nodes'), 'error');
+        return;
+    }
+    if (hop1Key === hop2Key) {
+        showToast(t('toast_chain_same_node'), 'error');
+        return;
+    }
+
+    const [cat1, id1] = hop1Key.split(':');
+    const [cat2, id2] = hop2Key.split(':');
+    const hop1Node = profiles[cat1]?.nodes?.find(n => n.id === id1);
+    const hop2Node = profiles[cat2]?.nodes?.find(n => n.id === id2);
+    if (!hop1Node || !hop2Node) return;
+
+    const chainName = document.getElementById('chain-name').value.trim()
+        || `${hop1Node.name || hop1Node.address} → ${hop2Node.name || hop2Node.address}`;
+
+    // Store chain as a synthetic node in Manual category
+    if (!profiles['Manual']) profiles['Manual'] = { url: null, nodes: [] };
+
+    // If editing an existing chain node, update it in-place
+    const editingId = document.getElementById('proxy-chain-modal').dataset.editingId;
+    const editingCat = document.getElementById('proxy-chain-modal').dataset.editingCat;
+
+    const chainEntry = {
+        id: editingId || Math.random().toString(36).substr(2, 9),
+        name: chainName,
+        protocol: 'chain',
+        address: hop2Node.address,
+        port: hop2Node.port,
+        uuid: '',
+        security: '',
+        rawUri: `chain://localhost/?hop1=${encodeURIComponent(hop1Node.rawUri)}&hop2=${encodeURIComponent(hop2Node.rawUri)}`
+    };
+
+    if (editingId && editingCat) {
+        const idx = profiles[editingCat]?.nodes?.findIndex(n => n.id === editingId);
+        if (idx !== undefined && idx !== -1) {
+            profiles[editingCat].nodes[idx] = chainEntry;
+            // Regenerate config if this chain is active
+            if (activeConfig === `${editingCat}:${editingId}`) {
+                const xrayConfig = _resolveXrayConfig(chainEntry.rawUri);
+                execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
+                    execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
+                        if (status === 'running') toggleService('restart');
+                    });
+                });
+            }
+        }
+    } else {
+        profiles['Manual'].nodes.push(chainEntry);
+    }
+
+    saveProfiles();
+    closeProxyChainModal();
+    renderProfiles();
+    showToast(t('toast_chain_saved'), 'success');
+}
+
+function openProxyChainEditModal(event, category, id) {
+    event.stopPropagation();
+    closeAllMenus();
+    const node = profiles[category]?.nodes?.find(n => n.id === id);
+    if (!node || node.protocol !== 'chain') return;
+
+    _populateChainSelects();
+
+    // Pre-fill the modal with existing chain data
+    document.getElementById('chain-name').value = node.name || '';
+
+    // Parse hop URIs out of rawUri to match selects
+    try {
+        const fakeRawUri = node.rawUri.replace(/^chain:\/\//i, 'https://');
+        const u = new URL(fakeRawUri);
+        const hop1Uri = u.searchParams.get('hop1') || '';
+        const hop2Uri = u.searchParams.get('hop2') || '';
+
+        // Match URIs back to category:id keys
+        const opts = _getAllNodeOptions();
+        let hop1Key = '', hop2Key = '';
+        Object.keys(profiles).forEach(cat => {
+            profiles[cat]?.nodes?.forEach(n => {
+                if (n.rawUri === hop1Uri) hop1Key = `${cat}:${n.id}`;
+                if (n.rawUri === hop2Uri) hop2Key = `${cat}:${n.id}`;
+            });
+        });
+        document.getElementById('chain-hop1').value = hop1Key;
+        document.getElementById('chain-hop2').value = hop2Key;
+    } catch(e) {}
+
+    // Store editing context on the modal element
+    document.getElementById('proxy-chain-modal').dataset.editingId = id;
+    document.getElementById('proxy-chain-modal').dataset.editingCat = category;
+
+    applyI18n();
+    document.getElementById('proxy-chain-modal').style.display = 'block';
 }
 
 async function importFromClipboard() {
@@ -1688,7 +1883,7 @@ function saveAdvancedSettingsForm(isLangOnly = false) {
             const [category, id] = activeConfig.split(':');
             const node = profiles[category]?.nodes?.find(n => n.id === id); 
             if (node) {
-                const xrayConfig = convert_uri_to_xray_json(node.rawUri, advSettings);
+                const xrayConfig = _resolveXrayConfig(node.rawUri);
                 execShell(`echo '${xrayConfig}' > '${CONFIG_JSON}'`, () => {
                     execShell(`sh ${MODDIR}/proxy_control.sh status`, (status) => {
                         if (status === 'running') {
@@ -1729,7 +1924,7 @@ function _buildXrayTestInbound(node, index) {
     const testPort = 21000 + (index % 1000);
     const tmpFile = `/dev/tmp_config_${node.id}.json`;
     let xrayConfigObj;
-    const rawConfigStr = convert_uri_to_xray_json(node.rawUri);
+    const rawConfigStr = _resolveXrayConfig(node.rawUri);
     xrayConfigObj = JSON.parse(rawConfigStr);
     xrayConfigObj.inbounds = [{
         tag: "socks-test-in",

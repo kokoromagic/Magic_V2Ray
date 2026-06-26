@@ -122,6 +122,20 @@ const i18n = {
         // Import dropdown
         import_from_clipboard: "Import from Clipboard",
         import_from_file: "Import from File",
+        add_proxy_chain: "Add Proxy Chain",
+
+        // Proxy Chain Modal
+        modal_proxy_chain_title: "Add Proxy Chain",
+        proxy_chain_desc: "Traffic flows: Client → Hop 1 → Hop 2 → Internet.<br>Hop 2's payload is encapsulated inside Hop 1's tunnel.",
+        lbl_chain_name: "Chain Name",
+        lbl_hop1: "Hop 1 (Outer · connects to internet)",
+        lbl_hop2: "Hop 2 (Inner · tunneled through Hop 1)",
+        chain_select_node: "— Select a node —",
+        chain_internet: "🌐 Internet",
+        toast_chain_saved: "Proxy chain saved",
+        toast_chain_select_nodes: "Please select both Hop 1 and Hop 2",
+        toast_chain_same_node: "Hop 1 and Hop 2 cannot be the same node",
+
         add_vmess: "Add VMess",
         add_vless: "Add VLESS",
         add_trojan: "Add Trojan",
@@ -297,6 +311,20 @@ const i18n = {
         // Import dropdown
         import_from_clipboard: "Nhập từ Clipboard",
         import_from_file: "Nhập từ File",
+        add_proxy_chain: "Thêm Proxy Chain",
+
+        // Proxy Chain Modal
+        modal_proxy_chain_title: "Thêm Proxy Chain",
+        proxy_chain_desc: "Luồng dữ liệu: Client → Hop 1 → Hop 2 → Internet.<br>Gói Hop 2 được đóng gói bên trong đường hầm Hop 1.",
+        lbl_chain_name: "Tên chuỗi",
+        lbl_hop1: "Hop 1 (Ngoài · kết nối Internet)",
+        lbl_hop2: "Hop 2 (Trong · đi qua đường hầm Hop 1)",
+        chain_select_node: "— Chọn một node —",
+        chain_internet: "🌐 Internet",
+        toast_chain_saved: "Đã lưu proxy chain",
+        toast_chain_select_nodes: "Vui lòng chọn cả Hop 1 và Hop 2",
+        toast_chain_same_node: "Hop 1 và Hop 2 không thể là cùng một node",
+
         add_vmess: "Thêm VMess",
         add_vless: "Thêm VLESS",
         add_trojan: "Thêm Trojan",

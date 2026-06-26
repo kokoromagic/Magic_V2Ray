@@ -16,6 +16,75 @@ function utoa(str) {
     return btoa(binString);
 }
 
+
+/**
+ * Build an Xray config for a 2-hop proxy chain.
+ *
+ * Data flow:
+ *   Client → [proxy-hop1 outbound] → Hop1 server → [proxy-hop2 outbound] → Hop2 server → Internet
+ *
+ * Xray mechanism: dialerProxy
+ *   - proxy-hop2 has  sockopt.dialerProxy = "proxy-hop1"
+ *     → its TCP/UDP connection is made *through* the hop1 outbound
+ *   - proxy-hop1 has  sockopt.dialerProxy = "direct"   (normal behaviour)
+ *
+ * The resulting outbounds array is:
+ *   [ proxy-hop2 (tagged "proxy"),  proxy-hop1 (tagged "proxy-hop1"),  freedom "direct" ]
+ *
+ * The routing rule sends all traffic to "proxy" (hop2), which in turn
+ * dials through hop1 automatically.
+ */
+function convert_chain_uris_to_xray_json(hop1Uri, hop2Uri, optional_settings) {
+    // Parse each hop individually — reuse existing single-URI logic
+    const hop1ConfigStr = convert_uri_to_xray_json(hop1Uri, optional_settings);
+    const hop2ConfigStr = convert_uri_to_xray_json(hop2Uri, optional_settings);
+
+    let hop1Config, hop2Config;
+    try { hop1Config = JSON.parse(hop1ConfigStr); } catch(e) { return hop1ConfigStr; }
+    try { hop2Config = JSON.parse(hop2ConfigStr); } catch(e) { return hop2ConfigStr; }
+
+    if (hop1Config.error) return hop1ConfigStr;
+    if (hop2Config.error) return hop2ConfigStr;
+
+    // Extract the outbound objects parsed by convert_uri_to_xray_json
+    // (first element is always the proxy outbound)
+    const hop1Out = hop1Config.outbounds[0];
+    const hop2Out = hop2Config.outbounds[0];
+
+    // Tag the two hops distinctly
+    hop1Out.tag = "proxy-hop1";
+    hop2Out.tag = "proxy";
+
+    // Hop1 dials directly to the internet
+    hop1Out.streamSettings = hop1Out.streamSettings || {};
+    hop1Out.streamSettings.sockopt = hop1Out.streamSettings.sockopt || {};
+    hop1Out.streamSettings.sockopt.mark = 255;
+    hop1Out.streamSettings.sockopt.dialerProxy = "direct";
+
+    // Hop2 dials through hop1
+    hop2Out.streamSettings = hop2Out.streamSettings || {};
+    hop2Out.streamSettings.sockopt = hop2Out.streamSettings.sockopt || {};
+    hop2Out.streamSettings.sockopt.mark = 255;
+    hop2Out.streamSettings.sockopt.dialerProxy = "proxy-hop1";
+
+    // Use the full config skeleton from hop2 (has correct dns/routing from settings)
+    // but replace outbounds with our chained pair
+    const fullConfig = hop2Config;
+    fullConfig.outbounds = [
+        hop2Out,
+        hop1Out,
+        {
+            protocol: "freedom",
+            tag: "direct",
+            streamSettings: {
+                sockopt: { mark: 255 }
+            }
+        }
+    ];
+
+    return JSON.stringify(fullConfig, null, 2);
+}
+
 function convert_uri_to_xray_json(uri, optional_settings) {
     const settings = optional_settings || {
         loglevel: "none",
