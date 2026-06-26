@@ -929,6 +929,7 @@ function getFullNodeDetails(node) {
             d.wgPresharedKey = p.get('presharedkey') || p.get('PreSharedKey') || "";
             d.wgReserved = p.get('reserved') || "";
             d.wgLocalAddress = p.get('address') || p.get('ip') || "172.16.0.2/32";
+            d.wgMTU = p.get('mtu') || 1420;
         } catch(e) {}
     }
 
@@ -988,6 +989,7 @@ function serializeNodeDetailsToUri(d, protocol) {
         if (d.wgPresharedKey) params.set('presharedkey', d.wgPresharedKey);
         if (d.wgReserved) params.set('reserved', d.wgReserved);
         if (d.wgLocalAddress) params.set('address', d.wgLocalAddress);
+        if (d.wgMTU) params.set('mtu', d.wgMTU);
         const user = d.wgSecretKey ? encodeURIComponent(d.wgSecretKey) : "";
         let urlStr = `wireguard://${user}@${d.address}:${d.port}`;
         const pStr = params.toString();
@@ -1223,6 +1225,7 @@ function _populateEditModal(node, isNew = false) {
     document.getElementById('edit-wg-preshared-key').value = d.wgPresharedKey;
     document.getElementById('edit-wg-reserved').value = d.wgReserved;
     document.getElementById('edit-wg-local-address').value = d.wgLocalAddress;
+    document.getElementById('edit-wg-mtu').value = d.wgMTU || 1420;
     // Hysteria2
     document.getElementById('edit-hy2-obfs-password').value = d.hy2ObfsPassword;
     document.getElementById('edit-hy2-port-hopping').value = d.hy2PortHopping;
@@ -1247,6 +1250,7 @@ function _populateEditModal(node, isNew = false) {
     const isShadowsocks = (proto === 'shadowsocks');
     const isClassic = (proto === 'vmess' || proto === 'vless' || proto === 'trojan');
 
+    document.getElementById('field-group-uuid').style.display = (proto === 'wireguard') ? 'none' : 'flex';
     document.getElementById('field-group-encryption').style.display = (proto === 'vmess') ? 'flex' : 'none';
     document.getElementById('field-group-flow').style.display = (proto === 'vless') ? 'flex' : 'none';
     document.getElementById('field-group-alterid').style.display = (proto === 'vmess') ? 'flex' : 'none';
@@ -1373,6 +1377,7 @@ function _collectEditFormData() {
         wgPresharedKey: document.getElementById('edit-wg-preshared-key').value.trim(),
         wgReserved: document.getElementById('edit-wg-reserved').value.trim(),
         wgLocalAddress: document.getElementById('edit-wg-local-address').value.trim() || "172.16.0.2/32",
+        wgMTU: parseInt(document.getElementById('edit-wg-mtu').value, 10) || 1420,
         // Hysteria2
         hy2ObfsPassword: document.getElementById('edit-hy2-obfs-password').value.trim(),
         hy2PortHopping: document.getElementById('edit-hy2-port-hopping').value.trim(),
