@@ -613,6 +613,16 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         routing: {
             "domainStrategy": useFakeIp ? "AsIs" : "IPIfNonMatch",
             "rules": [
+                // WireGuard needs to resolve its peer endpoint before the tunnel is up.
+                // Xray's internal DNS for this comes from xray.system.* (no inboundTag),
+                // so the inboundTag-scoped DNS rule below won't catch it.
+                // Force all port-53 traffic with no inboundTag straight to direct so
+                // WireGuard can resolve its endpoint without looping through itself.
+                ...(outbound.protocol === 'wireguard' ? [{
+                    "type": "field",
+                    "port": 53,
+                    "outboundTag": "direct"
+                }] : []),
                 {
                     "type": "field",
                     "inboundTag": [
