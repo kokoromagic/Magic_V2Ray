@@ -169,7 +169,16 @@ const extractUrisFromText = (text) => {
         let trimmedLine = line.trim();
         if (!trimmedLine) return;
 
-        if (!trimmedLine.includes('://') && /^[A-Za-z0-9+/=]+$/.test(trimmedLine)) {
+        if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
+            // It must be one line
+            try {
+                const parsedObj = JSON.parse(trimmedLine);
+                uris.push(convert_outbound_to_uri(parsedObj));
+            } catch (e) {
+                console.warn("Cannot parse JSON:", trimmedLine);
+                console.warn(e);
+            };
+        } else if (!trimmedLine.includes('://') && /^[A-Za-z0-9+/=]+$/.test(trimmedLine)) {
             try {
                 const decoded = decodeBase64(trimmedLine);
                 if (decoded) {

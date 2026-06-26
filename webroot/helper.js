@@ -660,3 +660,258 @@ function convert_uri_to_xray_json(uri, optional_settings) {
 
     return JSON.stringify(fullConfig, null, 2);
 }
+
+function convert_outbound_to_uri(outbound) {
+    const proto   = (outbound.protocol || '').toLowerCase();
+    const ss      = outbound.streamSettings || {};
+    const net     = ss.network || 'tcp';
+    const sec     = ss.security || 'none';
+
+    // Percent-encode everything except unreserved chars (RFC 3986)
+    const pct = s => encodeURIComponent(String(s));
+
+    // Build query string from a plain object (skips null/undefined values)
+    function buildQuery(obj) {
+        return Object.entries(obj)
+            .filter(([, v]) => v !== null && v !== undefined && v !== '')
+            .map(([k, v]) => `${k}=${pct(v)}`)
+            .join('&');
+    }
+
+    try {
+        if (proto === 'vmess') {
+            const vnext = outbound.settings.vnext[0];
+            const user  = vnext.users[0];
+            const tls   = ss.tlsSettings || {};
+            const netSettings = ss[`${net}Settings`] || ss.wsSettings || {};
+
+            const obj = {
+                v:    '2',
+                ps:   '',
+                add:  vnext.address,
+                port: String(vnext.port),
+                id:   user.id,
+                aid:  String(user.alterId || 0),
+                net,
+                type: 'none',
+                host: '',
+                path: '',
+                tls:  sec === 'tls' ? 'tls' : '',
+                sni:  tls.serverName || '',
+                alpn: tls.alpn ? tls.alpn.join(',') : ''
+            };
+
+            if (net === 'ws') {
+                obj.path = (ss.wsSettings || {}).path || '/';
+                obj.host = (ss.wsSettings || {}).headers?.Host || (ss.wsSettings || {}).host || '';
+            } else if (net === 'httpupgrade') {
+                obj.path = (ss.httpupgradeSettings || {}).path || '/';
+                obj.host = (ss.httpupgradeSettings || {}).host || '';
+            } else if (net === 'xhttp' || net === 'splithttp') {
+                const xs = ss.xhttpSettings || {};
+                obj.path = xs.path || '/';
+                obj.host = xs.host || '';
+                if (xs.mode) obj.mode = xs.mode;
+            } else if (net === 'h2' || net === 'http') {
+                const hs = ss.httpSettings || {};
+                obj.path = hs.path || '/';
+                obj.host = Array.isArray(hs.host) ? hs.host.join(',') : (hs.host || '');
+            } else if (net === 'grpc') {
+                const gs = ss.grpcSettings || {};
+                obj.path = gs.serviceName || '';
+                obj.mode = gs.multiMode ? 'multi' : 'gun';
+            } else if (net === 'kcp' || net === 'mkcp') {
+                const ks = ss.kcpSettings || {};
+                obj.type = (ks.header || {}).type || 'none';
+                if (ks.seed) obj.seed = ks.seed;
+            } else if (net === 'tcp') {
+                const tcpH = (ss.tcpSettings || {}).header || {};
+                obj.type = tcpH.type || 'none';
+                if (tcpH.type === 'http') {
+                    obj.path = (tcpH.request?.path || []).join(',') || '/';
+                    const hHost = tcpH.request?.headers?.Host;
+                    obj.host = Array.isArray(hHost) ? hHost.join(',') : (hHost || '');
+                }
+            }
+
+            return 'vmess://' + btoa(JSON.stringify(obj));
+        }
+
+        if (proto === 'vless' || proto === 'trojan') {
+            let user, host, port;
+            if (proto === 'vless') {
+                const vnext = outbound.settings.vnext[0];
+                user = vnext.users[0].id;
+                host = vnext.address;
+                port = vnext.port;
+            } else {
+                const srv = outbound.settings.servers[0];
+                user = srv.password;
+                host = srv.address;
+                port = srv.port;
+            }
+
+            const q = {};
+            q.type = net;
+            q.security = sec;
+
+            if (sec === 'tls') {
+                const tls = ss.tlsSettings || {};
+                if (tls.serverName)  q.sni = tls.serverName;
+                if (tls.fingerprint) q.fp  = tls.fingerprint;
+                if (tls.alpn?.length) q.alpn = tls.alpn.join(',');
+            } else if (sec === 'reality') {
+                const r = ss.realitySettings || {};
+                if (r.serverName)  q.sni = r.serverName;
+                if (r.fingerprint) q.fp  = r.fingerprint;
+                if (r.publicKey)   q.pbk = r.publicKey;
+                if (r.shortId)     q.sid = r.shortId;
+                if (r.spiderX)     q.spx = r.spiderX;
+            }
+
+            if (net === 'ws') {
+                const ws = ss.wsSettings || {};
+                q.path = ws.path || '/';
+                q.host = ws.headers?.Host || ws.host || '';
+            } else if (net === 'httpupgrade') {
+                const hu = ss.httpupgradeSettings || {};
+                q.path = hu.path || '/';
+                q.host = hu.host || '';
+            } else if (net === 'xhttp' || net === 'splithttp') {
+                const xs = ss.xhttpSettings || {};
+                q.path = xs.path || '/';
+                q.host = xs.host || '';
+                if (xs.mode && xs.mode !== 'auto') q.mode = xs.mode;
+            } else if (net === 'h2' || net === 'http') {
+                const hs = ss.httpSettings || {};
+                q.path = hs.path || '/';
+                q.host = Array.isArray(hs.host) ? hs.host.join(',') : (hs.host || '');
+            } else if (net === 'grpc') {
+                const gs = ss.grpcSettings || {};
+                q.serviceName = gs.serviceName || '';
+                if (gs.multiMode) q.mode = 'multi';
+                if (gs.authority) q.authority = gs.authority;
+            } else if (net === 'kcp' || net === 'mkcp') {
+                const ks = ss.kcpSettings || {};
+                q.headerType = (ks.header || {}).type || 'none';
+                if (ks.seed) q.seed = ks.seed;
+            } else if (net === 'tcp') {
+                const tcpH = (ss.tcpSettings || {}).header || {};
+                if (tcpH.type && tcpH.type !== 'none') {
+                    q.headerType = tcpH.type;
+                    if (tcpH.type === 'http') {
+                        q.path = (tcpH.request?.path || []).join(',') || '/';
+                        const hHost = tcpH.request?.headers?.Host;
+                        q.host = Array.isArray(hHost) ? hHost.join(',') : (hHost || '');
+                    }
+                }
+            }
+
+            if (proto === 'vless') {
+                const flow = outbound.settings.vnext[0].users[0].flow;
+                if (flow) q.flow = flow;
+            }
+
+            const queryStr = buildQuery(q);
+            const nodeTag = (proto === 'vless' ? 'VLESS Node' : 'Trojan Node');
+            return `${proto}://${pct(user)}@${host}:${port}?${queryStr}#${pct(nodeTag)}`;
+        }
+
+        if (proto === 'shadowsocks') {
+            const srv = outbound.settings.servers[0];
+            // userinfo = base64(method:password)  — SIP002 style
+            const userInfo = btoa(`${srv.method}:${srv.password}`);
+            const nodeTag = 'SS Node';
+            return `ss://${userInfo}@${srv.address}:${srv.port}#${pct(nodeTag)}`;
+        }
+
+        if (proto === 'wireguard') {
+            const cfg  = outbound.settings;
+            const peer = (cfg.peers || [])[0] || {};
+
+            // endpoint → host:port
+            const endpoint = peer.endpoint || 'unknown:51820';
+            const lastColon = endpoint.lastIndexOf(':');
+            const wgHost = endpoint.substring(0, lastColon);
+            const wgPort = endpoint.substring(lastColon + 1);
+
+            // secretKey — encode +, /, = per the WireGuard URI convention
+            const secretKey = (cfg.secretKey || '').replace(/\+/g, '%2B').replace(/\//g, '%2F').replace(/=/g, '%3D');
+
+            const q = {};
+            if (peer.publicKey) {
+                q.publickey = peer.publicKey.replace(/\+/g, '%2B').replace(/\//g, '%2F').replace(/=/g, '%3D');
+            }
+            if (peer.preSharedKey) {
+                q.presharedkey = peer.preSharedKey;
+            }
+            if (cfg.address?.length) {
+                // Each address may contain / and : — percent-encode the whole joined string
+                q.address = pct(cfg.address.join(','));
+            }
+            if (cfg.mtu) q.mtu = cfg.mtu;
+            if (cfg.reserved?.length) {
+                q.reserved = pct(cfg.reserved.join(','));
+            }
+            if (cfg.dns) {
+                q.dns = Array.isArray(cfg.dns) ? cfg.dns.join(',') : cfg.dns;
+            }
+
+            // Build query manually (publickey and address are already pct-encoded above)
+            const queryStr = Object.entries(q)
+                .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                .map(([k, v]) => `${k}=${v}`)
+                .join('&');
+
+            const nodeTag = 'WireGuard Profile';
+            return `wireguard://${secretKey}@${wgHost}:${wgPort}/?${queryStr}#${pct(nodeTag)}`;
+        }
+
+        if (proto === 'hysteria2') {
+            const cfg = outbound.settings;
+            const srv = (cfg.servers || [])[0] || {};
+            const tls = ss.tlsSettings || {};
+
+            const q = {};
+            if (tls.serverName) q.sni = tls.serverName;
+            if (srv.ports)      q.mport = srv.ports;
+            if (cfg.downlinkCapacity) q.down = cfg.downlinkCapacity;
+            if (cfg.uplinkCapacity)   q.up   = cfg.uplinkCapacity;
+            if (cfg.hopInterval)      q.hopInterval = cfg.hopInterval;
+            if (cfg.obfs) {
+                q.obfs = cfg.obfs.type || 'salamander';
+                q['obfs-password'] = cfg.obfs.password || '';
+            }
+
+            const queryStr = buildQuery(q);
+            const nodeTag  = 'Hysteria2 Node';
+            const auth     = pct(cfg.auth || '');
+            return `hy2://${auth}@${srv.address}:${srv.port}?${queryStr}#${pct(nodeTag)}`;
+        }
+
+        if (proto === 'socks') {
+            const srv = outbound.settings.servers[0];
+            const nodeTag = 'SOCKS Node';
+            if (srv.users?.length) {
+                const u = srv.users[0];
+                return `socks://${pct(u.user)}:${pct(u.pass)}@${srv.address}:${srv.port}#${pct(nodeTag)}`;
+            }
+            return `socks://${srv.address}:${srv.port}#${pct(nodeTag)}`;
+        }
+        if (proto === 'http') {
+            const srv  = outbound.settings.servers[0];
+            const scheme = sec === 'tls' ? 'https' : 'http';
+            const nodeTag = 'HTTP Node';
+            if (srv.users?.length) {
+                const u = srv.users[0];
+                return `${scheme}://${pct(u.user)}:${pct(u.pass)}@${srv.address}:${srv.port}#${pct(nodeTag)}`;
+            }
+            return `${scheme}://${srv.address}:${srv.port}#${pct(nodeTag)}`;
+        }
+
+        return `Error: unsupported protocol "${proto}"`;
+
+    } catch (e) {
+        return 'Error: ' + e.message;
+    }
+}
