@@ -203,7 +203,14 @@ clear_routing_rules() {
     $ip6tables -t mangle -X XRAY_MARK
     $ip -6 rule del fwmark 1 table 100 priority 1010
     # IPv6 hotspot
-    $ip6tables -D FORWARD -j REJECT --reject-with icmp6-no-route
+    $ip6tables -D FORWARD -i xraytun0 -j ACCEPT
+    $ip6tables -D FORWARD -o xraytun0 -j ACCEPT
+    $ip6tables -t mangle -D PREROUTING -p udp --dport 53 -j MARK --set-xmark 1
+    $ip6tables -t mangle -D PREROUTING -p tcp --dport 53 -j MARK --set-xmark 1
+    $ip6tables -t mangle -D PREROUTING ! -i xraytun0 -d ::1/128 -j RETURN
+    $ip6tables -t mangle -D PREROUTING ! -i xraytun0 -d fe80::/10 -j RETURN
+    $ip6tables -t mangle -D PREROUTING ! -i xraytun0 -d fc00::/7 -j RETURN
+    $ip6tables -t mangle -D PREROUTING ! -i xraytun0 -m addrtype ! --src-type LOCAL -j MARK --set-xmark 1
 
     # Down the tun device
     $ip link set dev xraytun0 down
@@ -293,13 +300,14 @@ do_job() {
             $ip6tables -t mangle -A XRAY_MARK -m owner --uid-owner 9999-2147483647 -j MARK --set-xmark 1
             $ip6tables -t mangle -A OUTPUT -j XRAY_MARK
             # IPv6 Hotspot support
-            # NOTE: IPv6 is strictly rejected for connected hotspot clients due to two reasons:
-            # 1. Android's network daemon (netd) constantly flushes and rewrites the native 
-            #    FORWARD chains when tethering states toggle, leaking raw IPv6 data to clients.
-            # 2. Most upstream proxy endpoints (or gRPC outbounds) lack native mobile IPv6 
-            #    support, leading to fatal "read/write on closed pipe" UDP errors in Xray core.
-            # By rejecting IPv6 at the gate, clients are safely forced to fallback 100% to IPv4.
-            $ip6tables -I FORWARD -j REJECT --reject-with icmp6-no-route
+            $ip6tables -I FORWARD -i xraytun0 -j ACCEPT
+            $ip6tables -I FORWARD -o xraytun0 -j ACCEPT
+            $ip6tables -t mangle -I PREROUTING -p udp --dport 53 -j MARK --set-xmark 1
+            $ip6tables -t mangle -I PREROUTING -p tcp --dport 53 -j MARK --set-xmark 1
+            $ip6tables -t mangle -A PREROUTING ! -i xraytun0 -d ::1/128 -j RETURN
+            $ip6tables -t mangle -A PREROUTING ! -i xraytun0 -d fe80::/10 -j RETURN
+            $ip6tables -t mangle -A PREROUTING ! -i xraytun0 -d fc00::/7 -j RETURN
+            $ip6tables -t mangle -A PREROUTING ! -i xraytun0 -m addrtype ! --src-type LOCAL -j MARK --set-xmark 1
         fi
     fi
     if [ "$content" = "stop" ]; then
