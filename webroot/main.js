@@ -1555,6 +1555,8 @@ function _getAllNodeOptions() {
         const nodes = profiles[category]?.nodes;
         if (!nodes || nodes.length === 0) return;
         nodes.forEach(node => {
+            // Chain nodes cannot be used as hops inside another chain
+            if (node.protocol === 'chain') return;
             options.push({
                 value: `${category}:${node.id}`,
                 label: `[${category}] ${node.name || node.address} — ${(node.protocol || '').toUpperCase()}`
@@ -1618,6 +1620,12 @@ function saveProxyChain() {
     const hop1Node = profiles[cat1]?.nodes?.find(n => n.id === id1);
     const hop2Node = profiles[cat2]?.nodes?.find(n => n.id === id2);
     if (!hop1Node || !hop2Node) return;
+
+    // Chain nodes cannot be used as hops inside another chain
+    if (hop1Node.protocol === 'chain' || hop2Node.protocol === 'chain') {
+        showToast(t('toast_chain_no_chain_hop'), 'error');
+        return;
+    }
 
     const chainName = document.getElementById('chain-name').value.trim()
         || `${hop1Node.name || hop1Node.address} → ${hop2Node.name || hop2Node.address}`;

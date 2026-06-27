@@ -135,6 +135,7 @@ const i18n = {
         toast_chain_saved: "Proxy chain saved",
         toast_chain_select_nodes: "Please select both Hop 1 and Hop 2",
         toast_chain_same_node: "Hop 1 and Hop 2 cannot be the same node",
+        toast_chain_no_chain_hop: "A proxy chain cannot be used as a hop inside another chain.",
 
         add_vmess: "Add VMess",
         add_vless: "Add VLESS",
@@ -324,6 +325,7 @@ const i18n = {
         toast_chain_saved: "Đã lưu proxy chain",
         toast_chain_select_nodes: "Vui lòng chọn cả Hop 1 và Hop 2",
         toast_chain_same_node: "Hop 1 và Hop 2 không thể là cùng một node",
+        toast_chain_no_chain_hop: "Không thể dùng proxy chain làm hop trong chuỗi khác.",
 
         add_vmess: "Thêm VMess",
         add_vless: "Thêm VLESS",
