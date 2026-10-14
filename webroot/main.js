@@ -25,7 +25,36 @@ function applyI18n() {
         }
     });
     const select = document.getElementById('lang-select');
-    if (select) select.value = currentLang;
+    // "auto" stays selected while no language has been chosen explicitly.
+    if (select) select.value = advSettings.lang ? currentLang : 'auto';
+    document.documentElement.lang = ({ 'zh': 'zh-CN', 'zh-tw': 'zh-TW' })[currentLang] || currentLang;
+}
+
+// Maps the system / WebView locale list (navigator.languages, most preferred
+// first) onto one of the languages in i18n.js. First match wins; anything
+// unsupported falls back to English.
+function detectSystemLanguage() {
+    const list = (navigator.languages && navigator.languages.length)
+        ? navigator.languages
+        : [navigator.language || navigator.userLanguage || ''];
+    for (const raw of list) {
+        const tag = String(raw || '').toLowerCase().replace(/_/g, '-');
+        if (!tag) continue;
+        const base = tag.split('-')[0];
+        if (base === 'zh') {
+            // Traditional: zh-TW / zh-HK / zh-MO / zh-Hant-*. Everything else
+            // (zh, zh-CN, zh-SG, zh-Hans-*) is Simplified.
+            return /(^|-)(tw|hk|mo|hant)(-|$)/.test(tag) ? 'zh-tw' : 'zh';
+        }
+        if (i18n[base]) return base;
+    }
+    return 'en';
+}
+
+// Explicit choice (advSettings.lang) wins; otherwise follow the system.
+function resolveLanguage() {
+    if (advSettings.lang && i18n[advSettings.lang]) return advSettings.lang;
+    return detectSystemLanguage();
 }
 
 function t(key, variables = {}) {
@@ -37,9 +66,14 @@ function t(key, variables = {}) {
 }
 
 function changeLanguage(lang) {
-    if (!i18n[lang]) return;
-    currentLang = lang;
-    advSettings.lang = lang;
+    if (lang === 'auto') {
+        delete advSettings.lang;          // back to following the system
+        currentLang = detectSystemLanguage();
+    } else {
+        if (!i18n[lang]) return;
+        currentLang = lang;
+        advSettings.lang = lang;
+    }
     applyI18n();
     updateLanBypassSummary();
     updateDnsSummary();
@@ -3318,7 +3352,7 @@ function syncQueryStrategyHint() {
 
 function bindSettingsToFormView() {
     migrateDnsSettings();
-    currentLang = advSettings.lang || "en";
+    currentLang = resolveLanguage();
     applyI18n();
 
     document.getElementById('set-loglevel').value = advSettings.loglevel || "none";
@@ -3418,7 +3452,8 @@ function saveAdvancedSettingsForm(isLangOnly = false) {    advSettings.loglevel 
 
     advSettings.mtu = parseInt(document.getElementById('set-mtu').value) || 1350;
 
-    advSettings.lang = currentLang;
+    // advSettings.lang is only written by changeLanguage() (explicit choice);
+    // persisting currentLang here would turn auto-detection into a fixed choice.
 
     writeFileB64(SETTINGS_FILE, utoa(JSON.stringify(advSettings)), () => {
         if (isLangOnly) return;
