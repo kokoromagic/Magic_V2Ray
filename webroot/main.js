@@ -3928,6 +3928,18 @@ function persistRoutingRules() {
     });
 }
 
+// Restores the built-in routing rule list. Replaces every rule, locked ones
+// included (a deliberate reset, unlike a preset import which keeps locked
+// rules). domainStrategy is a separate setting and is left alone.
+async function resetRoutingRulesToDefault() {
+    const ok = await showConfirm(t('confirm_reset_rules'));
+    if (!ok) return;
+    advSettings.routingRules = JSON.parse(ROUTING_RULES_DEFAULTS_JSON);
+    renderRoutingRules();
+    persistRoutingRules();
+    showToast(t('toast_rules_reset'), 'success');
+}
+
 // ===== Import / Export Routing Presets (JSON) =====
 
 function _rtSplitCsv(v) {

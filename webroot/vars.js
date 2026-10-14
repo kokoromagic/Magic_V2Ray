@@ -310,6 +310,9 @@ const TRAFFIC_SETTING_KEYS = [
 ];
 // Snapshot taken here, before any saved settings are loaded over advSettings,
 // so the defaults live in one place (the advSettings literal above).
+// Same idea for the Routing tab's "Reset to default rules": a serialized copy
+// of the built-in rule list, taken before any saved settings are loaded.
+const ROUTING_RULES_DEFAULTS_JSON = JSON.stringify(advSettings.routingRules);
 const TRAFFIC_SETTINGS_DEFAULTS = Object.freeze(
     Object.fromEntries(TRAFFIC_SETTING_KEYS.map(k => [k, advSettings[k]]))
 );
