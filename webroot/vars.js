@@ -171,6 +171,28 @@ let advSettings = {
             "enabled": true
         },
         {
+            "remarks": "Gateway Magic domain",
+            "locked": false,
+            "domain": "domain:gateway-magic.huskydg.dpdns.org",
+            "ip": "",
+            "port": "",
+            "protocol": "",
+            "network": "",
+            "outboundTag": "direct",
+            "enabled": true
+        },
+        {
+            "remarks": "Gateway Magic IP",
+            "locked": false,
+            "domain": "",
+            "ip": "198.18.0.1,fdfe:dcba:9876::1",
+            "port": "",
+            "protocol": "",
+            "network": "",
+            "outboundTag": "direct",
+            "enabled": true
+        },
+        {
             "remarks": "绕过局域网IP",
             "locked": false,
             "domain": "",
