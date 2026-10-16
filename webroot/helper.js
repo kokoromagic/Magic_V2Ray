@@ -1584,6 +1584,20 @@ function convert_uri_to_xray_json(uri, optional_settings) {
     // upstream queries (tagless, port 53) then leave via proxy/direct.
     const hijackDns = settings.hijackDns === true;
 
+    // Client DNS rule (port 53 from tun-in / socks-test-in). Defined once so it
+    // can be placed either at the very top of routing.rules (hijack ON) or at
+    // its original position (hijack OFF) without duplicating the object.
+    const clientDnsRule = {
+        "type": "field",
+        "inboundTag": [
+            "socks-test-in",
+            "tun-in",
+        ],
+        "port": 53,
+        // Hijack ON: hand the query to Xray's DNS module (dns-out).
+        "outboundTag": hijackDns ? "dns-out" : dnsOutboundTag
+    };
+
     // Resolve effective fakeip flag — new field (fakeDnsLocal) takes priority when
     // Local DNS is enabled; fall back to legacy fakeDns for backward compatibility.
     const useFakeIp = settings.localDns
@@ -1749,6 +1763,10 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         routing: {
             "domainStrategy": routingDomainStrategy,
             "rules": [
+                // Hijack ON: the client DNS rule must be FIRST so that no custom
+                // rule (or the private-network bypass) can catch port-53 traffic
+                // before it reaches dns-out. Hijack OFF: it stays further down.
+                ...(hijackDns ? [clientDnsRule] : []),
                 // User-defined routing rules (Routing Settings tab). Evaluated in the
                 // order the user arranged them, above the private-network bypass so a
                 // custom rule can override it if the user explicitly wants to.
@@ -1768,16 +1786,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                 // (manual test path) and tun-in (real device DNS, now that
                 // traffic reaches xray via tun-in instead of hev bridging
                 // into socks-test-in).
-                {
-                    "type": "field",
-                    "inboundTag": [
-                        "socks-test-in",
-                        "tun-in",
-                    ],
-                    "port": 53,
-                    // Hijack ON: hand the query to Xray's DNS module (dns-out).
-                    "outboundTag": hijackDns ? "dns-out" : dnsOutboundTag
-                },
+                // (Hijack ON: already emitted at the top of the list.)
+                ...(hijackDns ? [] : [clientDnsRule]),
                 // Per-upstream rules (2b): route each configured domestic/
                 // foreign DNS server's OWN outbound queries individually
                 // (domestic -> direct, foreign -> dnsViaProxy) instead of
