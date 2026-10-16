@@ -1366,6 +1366,15 @@ apply_routing_rules() {
     for bypass_if in $bypass_iface_list; do
         $iptables -t mangle -A XRAY_MARK -o "$bypass_if" -j RETURN
     done
+    # DNS capture: every local UDP/TCP 53 packet is marked and sent into the
+    # tun, even when the resolver is a LAN/private address, the uid is in
+    # XRAY_UID_EXCLUDE_LIST, or networkMode would otherwise skip it. Placed
+    # after the fwmark RETURN (xray's own lookups must not loop) and after
+    # bypassIface. Loopback resolvers stay local (xray's own DNS inbound).
+    for proto in udp tcp; do
+        $iptables -t mangle -A XRAY_MARK -p $proto --dport 53 ! -d "$LAN_ALWAYS_SKIP_V4" -j MARK --set-xmark 1
+        $iptables -t mangle -A XRAY_MARK -p $proto --dport 53 ! -d "$LAN_ALWAYS_SKIP_V4" -j RETURN
+    done
     for cidr in $LAN_SKIP_V4; do
         $iptables -t mangle -A XRAY_MARK -d "$cidr" -j RETURN
     done
@@ -1423,6 +1432,7 @@ apply_routing_rules() {
         # Force DNS redirection for tethered clients to Cloudflare DNS
         for cidr in $LAN_BYPASS_V4; do
             $iptables -t nat -I PREROUTING ! -i $TUN_NAME -d "$cidr" -p udp --dport 53 -j DNAT --to 1.1.1.1
+            $iptables -t nat -I PREROUTING ! -i $TUN_NAME -d "$cidr" -p tcp --dport 53 -j DNAT --to 1.1.1.1
         done
 
         $iptables -t mangle -A HOTSPOT_PREROUTING ! -i $TUN_NAME -p tcp -j MARK --set-xmark 1
@@ -1489,8 +1499,11 @@ apply_routing_rules() {
         for bypass_if in $bypass_iface_list; do
             $ip6tables -t mangle -A XRAY_MARK -o "$bypass_if" -j RETURN
         done
-        # $ip6tables -t mangle -A XRAY_MARK -p udp --dport 53 -j DROP
-        # $ip6tables -t mangle -A XRAY_MARK -p tcp --dport 53 -j DROP
+        # DNS capture (mirrors IPv4): all UDP/TCP 53 goes into the tun.
+        for proto in udp tcp; do
+            $ip6tables -t mangle -A XRAY_MARK -p $proto --dport 53 ! -d "$LAN_ALWAYS_SKIP_V6" -j MARK --set-xmark 1
+            $ip6tables -t mangle -A XRAY_MARK -p $proto --dport 53 ! -d "$LAN_ALWAYS_SKIP_V6" -j RETURN
+        done
         for cidr in $LAN_SKIP_V6; do
             $ip6tables -t mangle -A XRAY_MARK -d "$cidr" -j RETURN
         done
@@ -1674,6 +1687,7 @@ clear_routing_rules() {
 
     for cidr in $LAN_BYPASS_V4; do
         $iptables -D PREROUTING -t nat ! -i $TUN_NAME -d "$cidr" -p udp --dport 53 -j DNAT --to 1.1.1.1
+        $iptables -D PREROUTING -t nat ! -i $TUN_NAME -d "$cidr" -p tcp --dport 53 -j DNAT --to 1.1.1.1
     done
 
     $iptables -t mangle -D PREROUTING -j HOTSPOT_PREROUTING
