@@ -1,10 +1,8 @@
-# Magic V2Ray v1.24 Release Notes
+# Magic V2Ray v1.25 Release Notes
 
-## What's New
+Introduces critical improvements to DNS traffic routing, rule prioritization, and user interface stability.
 
-* **Automatic Language Detection:** Added an **Auto (system)** language option that automatically maps your device or browser locale to the interface language (supporting English, Vietnamese, Simplified Chinese, Traditional Chinese, and Russian out of the box), while still allowing manual overrides.
-* **Default Routing Rules Reset:** Added a new **Reset to default rules** action under the Routing menu, enabling users to instantly restore the built-in routing presets without affecting domain strategies.
-* **Russian Language Support:** Added comprehensive Russian (`ru`) localization across the WebUI, covering all dashboard elements, settings, and menus.
+This update reorganizes routing rules to place user-defined rules and client DNS routing ahead of standard DNS rules, ensuring that custom configurations are correctly prioritized. When DNS hijacking is active, client DNS rules are now prioritized at the top of the routing stack to prevent traffic from being intercepted prematurely. Additionally, the header layout has been refined to streamline the service status display and layout presentation.
 
 ---
 
