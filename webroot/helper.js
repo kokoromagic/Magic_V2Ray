@@ -1749,6 +1749,21 @@ function convert_uri_to_xray_json(uri, optional_settings) {
         routing: {
             "domainStrategy": routingDomainStrategy,
             "rules": [
+                // User-defined routing rules (Routing Settings tab). Evaluated in the
+                // order the user arranged them, above the private-network bypass so a
+                // custom rule can override it if the user explicitly wants to.
+                ..._buildCustomRoutingRules(settings.routingRules, ruleNodes.tagByRemark),
+                {
+                    "type": "field",
+                    "ip": [
+                        "geoip:private"
+                    ],
+                    "domain": [
+                        "geosite:private"
+                    ],
+                    "outboundTag": "direct"
+                },
+                
                 // Narrow rule first (2 conditions): user DNS from socks-test-in
                 // (manual test path) and tun-in (real device DNS, now that
                 // traffic reaches xray via tun-in instead of hev bridging
@@ -1806,20 +1821,8 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     "ip": buildFakeDnsPools(settings).map(p => p.ipPool),
                     "outboundTag": "proxy"
                 }] : []),
-                // User-defined routing rules (Routing Settings tab). Evaluated in the
-                // order the user arranged them, above the private-network bypass so a
-                // custom rule can override it if the user explicitly wants to.
-                ..._buildCustomRoutingRules(settings.routingRules, ruleNodes.tagByRemark),
-                {
-                    "type": "field",
-                    "ip": [
-                        "geoip:private"
-                    ],
-                    "domain": [
-                        "geosite:private"
-                    ],
-                    "outboundTag": "direct"
-                },
+
+                // Everything else will go through the proxy
                 {
                     "type": "field",
                     "inboundTag": [
@@ -1828,7 +1831,7 @@ function convert_uri_to_xray_json(uri, optional_settings) {
                     ],
                     "network": "tcp,udp",
                     "outboundTag": "proxy"
-                }
+                },
             ]
         }
     };
