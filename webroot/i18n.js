@@ -1405,7 +1405,7 @@ const i18n = {
         tab_settings: "Thiết lập lưu lượng",
         tab_network: "Thiết lập mạng",
         tab_about: "Giới thiệu",
-        lang_auto: "Tự động (theo hệ thống)",
+        lang_auto: "Tự động",
         about_tagline: "Proxy toàn hệ thống cho Android đã root, chạy trên nhân Xray-core.",
         about_intro: "Magic V2Ray chạy như một daemon với quyền root và đánh dấu gói tin ở tầng Netfilter, nên mọi ứng dụng — kể cả UID hệ thống và thiết bị dùng chung hotspot — đều đi qua proxy mà không chiếm ô VPN duy nhất của Android.",
         about_version: "Phiên bản module",

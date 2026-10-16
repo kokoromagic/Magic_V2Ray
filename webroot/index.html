@@ -12,10 +12,6 @@
             <div class="header-top-row">
                 <div style="min-width: 0; flex: 1;">
                     <h1>Magic V2Ray</h1>
-                    <div class="status-badge" id="service-status" role="button" tabindex="0"
-                         onclick="showCurrentIp()"
-                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCurrentIp();}">Status: Checking...</div>
-                    <div class="status-ip" id="status-ip" hidden></div>
                 </div>
                 <div class="header-actions">
                 <div class="lang-switcher">
@@ -47,6 +43,14 @@
                     </div>
                 </div>
                 </div>
+            </div>
+            <div class="header-top-row">
+              <div style="flex: 1; min-width: 0;">
+                <div class="status-badge" id="service-status" role="button" tabindex="0"
+                        onclick="showCurrentIp()"
+                        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCurrentIp();}">Status: Checking...</div>
+                <div class="status-ip" id="status-ip" hidden></div>
+              </div>
             </div>
             <section class="control-actions header-control-actions">
                 <button class="btn btn-start" onclick="toggleService('start')" data-i18n="btn_start">Start Engine</button>
